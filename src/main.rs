@@ -1,11 +1,12 @@
 use serde_json::Value;
-use std::env;
-use std::fs;
-use std::fs::OpenOptions;
-use std::io::Write;
-use std::path::Path;
-use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    env, fs,
+    fs::OpenOptions,
+    io::Write,
+    path::Path,
+    process::Command,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use toml::Value as TomlValue;
 
 fn main() {
@@ -76,10 +77,7 @@ fn main() {
     // Check if the deployment file exists
     if Path::new(&deployment_path).exists() {
         // Move the existing file to a new path with timestamp
-        _ = fs::rename(
-            &deployment_path,
-            get_deployment_path(is_deterministic, true),
-        );
+        _ = fs::rename(&deployment_path, get_deployment_path(is_deterministic, true));
     } else {
         // Create the parent directory
         _ = fs::create_dir_all(Path::new(&deployment_path).parent().unwrap());
@@ -93,51 +91,28 @@ fn main() {
         let command = "forge";
         let script_arg = format!("script/protocol/{}", script_name);
 
-        let command_args = vec![
-            "script",
-            &script_arg,
-            "--rpc-url",
-            &chain,
-            &broadcast_deployment,
-            &gas_price,
-        ];
+        let command_args = vec!["script", &script_arg, "--rpc-url", &chain, &broadcast_deployment, &gas_price];
 
-        println!(
-            "Running the deployment command: {} {} {}",
-            env_var,
-            command,
-            command_args.join(" ")
-        );
+        println!("Running the deployment command: {} {} {}", env_var, command, command_args.join(" "));
 
         // Set the environment variable
         let env_var_parts: Vec<&str> = env_var.split('=').collect();
         env::set_var(env_var_parts[0], env_var_parts[1]);
 
         // Create the CLI and capture the command output
-        let output = Command::new(command)
-            .args(command_args)
-            .output()
-            .expect("Failed to run command");
+        let output = Command::new(command).args(command_args).output().expect("Failed to run command");
 
         // Process command output
         let output_str = String::from_utf8_lossy(&output.stdout);
         if output.status.success() {
             println!("Command output: {}", output_str);
         } else {
-            eprintln!(
-                "Command failed with error: {}",
-                String::from_utf8_lossy(&output.stderr)
-            );
+            eprintln!("Command failed with error: {}", String::from_utf8_lossy(&output.stderr));
         }
 
         // Move broadcast file if needed
         if cp_broadcasted_file {
-            move_broadcast_file(
-                &script_name,
-                &chain,
-                &output_str,
-                !broadcast_deployment.is_empty(),
-            );
+            move_broadcast_file(&script_name, &chain, &output_str, !broadcast_deployment.is_empty());
         }
     }
 
@@ -206,11 +181,8 @@ fn get_deployment_path(is_deterministic: bool, with_timestamp: bool) -> String {
 
     if with_timestamp {
         // Get the current Unix timestamp as a string
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards")
-            .as_secs()
-            .to_string();
+        let timestamp =
+            SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs().to_string();
 
         // Insert the timestamp before the filename
         let filename_start = deployment_path.rfind('/').unwrap() + 1;
@@ -220,39 +192,24 @@ fn get_deployment_path(is_deterministic: bool, with_timestamp: bool) -> String {
     deployment_path
 }
 
-fn move_broadcast_file(
-    script_name: &str,
-    chain: &str,
-    output: &str,
-    is_broadcast_deployment: bool,
-) {
+fn move_broadcast_file(script_name: &str, chain: &str, output: &str, is_broadcast_deployment: bool) {
     // Find the chain_id in the `output`
-    let chain_id = output
-        .split(&format!("broadcast/{}/", script_name))
-        .nth(1)
-        .and_then(|s| s.split('/').next())
-        .unwrap_or("");
+    let chain_id =
+        output.split(&format!("broadcast/{}/", script_name)).nth(1).and_then(|s| s.split('/').next()).unwrap_or("");
 
     let broadcast_file_path = if is_broadcast_deployment {
         format!("broadcast/{}/{}/run-latest.json", script_name, chain_id)
     } else {
-        format!(
-            "broadcast/{}/{}/dry-run/run-latest.json",
-            script_name, chain_id
-        )
+        format!("broadcast/{}/{}/dry-run/run-latest.json", script_name, chain_id)
     };
 
-    let version = serde_json::from_str::<Value>(&fs::read_to_string("package.json").unwrap())
-        .unwrap()["version"]
+    let version = serde_json::from_str::<Value>(&fs::read_to_string("package.json").unwrap()).unwrap()["version"]
         .as_str()
         .unwrap()
         .to_string();
 
     // Up to be changed, see this: https://github.com/sablier-labs/v2-deployments/issues/10
-    let dest_path = format!(
-        "../v2-deployments/protocol/v{}/broadcasts/{}.json",
-        version, chain
-    );
+    let dest_path = format!("../v2-deployments/protocol/v{}/broadcasts/{}.json", version, chain);
 
     // Create the parent directory if it doesn't exist
     if let Some(parent) = Path::new(&dest_path).parent() {
@@ -262,6 +219,5 @@ fn move_broadcast_file(
     }
 
     // Move and rename the file
-    fs::rename(&broadcast_file_path, &dest_path)
-        .expect("Failed to move and rename run-latest.json to v2-deployments");
+    fs::rename(&broadcast_file_path, &dest_path).expect("Failed to move and rename run-latest.json to v2-deployments");
 }
