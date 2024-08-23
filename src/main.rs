@@ -91,7 +91,7 @@ fn main() {
     for chain in provided_chains {
         let env_var = "FOUNDRY_PROFILE=optimized";
         let command = "forge";
-        let script_arg = format!("../script/protocol/{}", script_name);
+        let script_arg = format!("script/protocol/{}", script_name);
 
         let command_args = vec![
             "script",
@@ -143,7 +143,7 @@ fn main() {
 
     // Run Prettier to format the deployment files
     _ = Command::new("bun")
-        .args(["prettier", "--write", "../deployments/**/*.md"])
+        .args(["prettier", "--write", "deployments/**/*.md"])
         .status()
         .expect("Failed to run Prettier");
 }
@@ -165,7 +165,7 @@ fn append_type_of_deployment(deployment_path: &str, is_broadcast_deployment: boo
 // Function that reads the TOML chain configurations and extracts them
 fn get_all_chains() -> Vec<String> {
     // Define the path to the TOML file
-    let toml_path = Path::new("../foundry.toml");
+    let toml_path = Path::new("foundry.toml");
 
     // Read and parse the TOML file content
     let toml_content = match fs::read_to_string(toml_path) {
@@ -199,9 +199,9 @@ fn get_all_chains() -> Vec<String> {
 
 fn get_deployment_path(is_deterministic: bool, with_timestamp: bool) -> String {
     let mut deployment_path = if is_deterministic {
-        "../deployments/deterministic.md".to_string()
+        "deployments/deterministic.md".to_string()
     } else {
-        "../deployments/non_deterministic.md".to_string()
+        "deployments/non_deterministic.md".to_string()
     };
 
     if with_timestamp {
@@ -234,15 +234,15 @@ fn move_broadcast_file(
         .unwrap_or("");
 
     let broadcast_file_path = if is_broadcast_deployment {
-        format!("../broadcast/{}/{}/run-latest.json", script_name, chain_id)
+        format!("broadcast/{}/{}/run-latest.json", script_name, chain_id)
     } else {
         format!(
-            "../broadcast/{}/{}/dry-run/run-latest.json",
+            "broadcast/{}/{}/dry-run/run-latest.json",
             script_name, chain_id
         )
     };
 
-    let version = serde_json::from_str::<Value>(&fs::read_to_string("../package.json").unwrap())
+    let version = serde_json::from_str::<Value>(&fs::read_to_string("package.json").unwrap())
         .unwrap()["version"]
         .as_str()
         .unwrap()
@@ -250,7 +250,7 @@ fn move_broadcast_file(
 
     // Up to be changed, see this: https://github.com/sablier-labs/v2-deployments/issues/10
     let dest_path = format!(
-        "../../v2-deployments/protocol/v{}/broadcasts/{}.json",
+        "../v2-deployments/protocol/v{}/broadcasts/{}.json",
         version, chain
     );
 
