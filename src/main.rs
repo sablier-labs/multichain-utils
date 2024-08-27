@@ -19,7 +19,7 @@ fn main() {
     let mut cp_broadcasted_file = false;
     let mut gas_price = "".to_string();
     let mut is_deterministic = false;
-    let mut script_name = "DeployProtocol.s.sol".to_string();
+    let mut script_name = "".to_string();
     let mut on_all_chains = false;
     let mut provided_chains = Vec::new();
 
@@ -28,8 +28,10 @@ fn main() {
         match arg.as_str() {
             "--all" => on_all_chains = true,
             "--cp-bf" => cp_broadcasted_file = true,
+            "--script" => {
+                script_name = iter.next().expect("script name").to_string();
+            }
             "--deterministic" => {
-                script_name = "DeployDeterministicProtocol.s.sol".to_string();
                 is_deterministic = true;
             }
             "--broadcast" => broadcast_deployment = " --broadcast --verify".to_string(),
@@ -44,6 +46,15 @@ fn main() {
                     println!("Unknown flag: {}", arg);
                 }
             }
+        }
+    }
+
+    // Use a default script if no script name is provided
+    if script_name.is_empty() {
+        script_name = if is_deterministic {
+            "protocol/DeployDeterministicProtocol.s.sol".to_string()
+        } else {
+            "protocol/DeployProtocol.s.sol".to_string()
         }
     }
 
@@ -89,7 +100,7 @@ fn main() {
     for chain in provided_chains {
         let env_var = "FOUNDRY_PROFILE=optimized";
         let command = "forge";
-        let script_arg = format!("script/protocol/{}", script_name);
+        let script_arg = format!("script/{}", script_name);
 
         let command_args = vec!["script", &script_arg, "--rpc-url", &chain, &broadcast_deployment, &gas_price];
 
