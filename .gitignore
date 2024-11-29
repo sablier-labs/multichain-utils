@@ -1,2 +1,6 @@
 # directories
 target/
+
+# files
+*.env
+.DS_Store
