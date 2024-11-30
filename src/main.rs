@@ -1,8 +1,6 @@
 use serde_json::Value;
 use std::{
     env, fs,
-    fs::OpenOptions,
-    io::Write,
     path::Path,
     process::Command,
     time::{SystemTime, UNIX_EPOCH},
@@ -94,9 +92,6 @@ fn main() {
         _ = fs::create_dir_all(Path::new(&deployment_path).parent().unwrap());
     }
 
-    // Append the type of deployment at the start of the deployment file
-    append_type_of_deployment(&deployment_path, !broadcast_deployment.is_empty());
-
     for chain in provided_chains {
         let env_var = "FOUNDRY_PROFILE=optimized";
         let command = "forge";
@@ -134,20 +129,6 @@ fn main() {
         .expect("Failed to run Prettier");
 }
 
-fn append_type_of_deployment(deployment_path: &str, is_broadcast_deployment: bool) {
-    let message = match is_broadcast_deployment {
-        true => " # This deployment is broadcasted\n\n",
-        false => " # This deployment is a simulation\n\n",
-    };
-
-    OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(deployment_path)
-        .and_then(|mut file| file.write_all(message.as_bytes()))
-        .expect("Failed to open or write to the file");
-}
-
 // Function that reads the TOML chain configurations and extracts them
 fn get_all_chains() -> Vec<String> {
     // Define the path to the TOML file
@@ -171,7 +152,7 @@ fn get_all_chains() -> Vec<String> {
     };
 
     // Extract chains from the TOML data
-    let sections = ["rpc_endpoints", "etherscan"];
+    let sections = ["rpc_endpoints"];
     let mut chains = Vec::new();
 
     for section in &sections {
