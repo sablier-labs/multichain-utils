@@ -1,10 +1,5 @@
 use serde_json::Value;
-use std::{
-    env, fs,
-    path::Path,
-    process::Command,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::{env, fs, path::Path, process::Command};
 use toml::Value as TomlValue;
 
 fn main() {
@@ -14,9 +9,9 @@ fn main() {
 
     // Variables to store flags and provided chains
     let mut broadcast_deployment = "".to_string();
+    let mut verify_deployment = false;
     let mut cp_broadcasted_file = false;
     let mut gas_price = "".to_string();
-    let mut is_deterministic = false;
     let mut script_name = "".to_string();
     let mut on_all_chains = false;
     let mut provided_chains = Vec::new();
@@ -29,10 +24,8 @@ fn main() {
             "--script" => {
                 script_name = iter.next().expect("script name").to_string();
             }
-            "--deterministic" => {
-                is_deterministic = true;
-            }
-            "--broadcast" => broadcast_deployment = " --broadcast --verify".to_string(),
+            "--broadcast" => broadcast_deployment = " --broadcast".to_string(),
+            "--verify" => verify_deployment = true,
             "--gas-price" => {
                 let value = iter.next().expect("gas price value").to_string();
                 gas_price = format!(" --gas-price {}", value);
@@ -49,11 +42,8 @@ fn main() {
 
     // Use a default script if no script name is provided
     if script_name.is_empty() {
-        script_name = if is_deterministic {
-            "protocol/DeployDeterministicProtocol.s.sol".to_string()
-        } else {
-            "protocol/DeployProtocol.s.sol".to_string()
-        }
+        script_name = "DeployProtocol.s.sol".to_string();
+        println!("No script name provided, using default script: {}", script_name);
     }
 
     let chains = get_all_chains();
@@ -81,23 +71,11 @@ fn main() {
     let chains_string = provided_chains.clone().join(", ");
     println!("Deploying to the chains: {}", chains_string);
 
-    let deployment_path = get_deployment_path(is_deterministic, false);
-
-    // Check if the deployment file exists
-    if Path::new(&deployment_path).exists() {
-        // Move the existing file to a new path with timestamp
-        _ = fs::rename(&deployment_path, get_deployment_path(is_deterministic, true));
-    } else {
-        // Create the parent directory
-        _ = fs::create_dir_all(Path::new(&deployment_path).parent().unwrap());
-    }
-
     for chain in provided_chains {
         let env_var = "FOUNDRY_PROFILE=optimized";
         let command = "forge";
-        let script_arg = format!("script/{}", script_name);
 
-        let command_args = vec!["script", &script_arg, "--rpc-url", &chain, &broadcast_deployment, &gas_price];
+        let command_args = vec!["script", &script_name, "--rpc-url", &chain, &broadcast_deployment, &gas_price];
 
         println!("Running the deployment command: {} {} {}", env_var, command, command_args.join(" "));
 
@@ -121,12 +99,6 @@ fn main() {
             move_broadcast_file(&script_name, &chain, &output_str, !broadcast_deployment.is_empty());
         }
     }
-
-    // Run Prettier to format the deployment files
-    _ = Command::new("bun")
-        .args(["prettier", "--write", "deployments/**/*.md"])
-        .status()
-        .expect("Failed to run Prettier");
 }
 
 // Function that reads the TOML chain configurations and extracts them
@@ -164,26 +136,6 @@ fn get_all_chains() -> Vec<String> {
     chains.into_iter().collect()
 }
 
-fn get_deployment_path(is_deterministic: bool, with_timestamp: bool) -> String {
-    let mut deployment_path = if is_deterministic {
-        "deployments/deterministic.md".to_string()
-    } else {
-        "deployments/non_deterministic.md".to_string()
-    };
-
-    if with_timestamp {
-        // Get the current Unix timestamp as a string
-        let timestamp =
-            SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs().to_string();
-
-        // Insert the timestamp before the filename
-        let filename_start = deployment_path.rfind('/').unwrap() + 1;
-        deployment_path.insert_str(filename_start, &format!("{}_{}", timestamp, ""));
-    }
-
-    deployment_path
-}
-
 fn move_broadcast_file(script_name: &str, chain: &str, output: &str, is_broadcast_deployment: bool) {
     // Find the chain_id in the `output`
     let chain_id =
@@ -200,7 +152,7 @@ fn move_broadcast_file(script_name: &str, chain: &str, output: &str, is_broadcas
         .unwrap()
         .to_string();
 
-    // Up to be changed, see this: https://github.com/sablier-labs/v2-deployments/issues/10
+    // TODO: change this accordingly to: https://github.com/sablier-labs/v2-deployments/issues/10
     let dest_path = format!("../v2-deployments/protocol/v{}/broadcasts/{}.json", version, chain);
 
     // Create the parent directory if it doesn't exist
