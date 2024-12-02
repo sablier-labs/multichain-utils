@@ -75,7 +75,24 @@ fn main() {
         let env_var = "FOUNDRY_PROFILE=optimized";
         let command = "forge";
 
-        let command_args = vec!["script", &script_name, "--rpc-url", &chain, &broadcast_deployment, &gas_price];
+        let mut command_args =
+            vec!["script".to_string(), script_name.to_string(), "--rpc-url".to_string(), chain.to_string()];
+
+        if !broadcast_deployment.is_empty() {
+            command_args.push(broadcast_deployment.to_string());
+        }
+
+        if !gas_price.is_empty() {
+            command_args.push(gas_price.to_string());
+        }
+
+        // Push the verify flag and etherscan API key. We need to it separately because otherwise they would be treated
+        // as a single argument.
+        if verify_deployment {
+            command_args.push("--verify".to_string());
+            command_args.push("--etherscan-api-key".to_string());
+            command_args.push(format!("${}_API_KEY", chain.to_uppercase()));
+        }
 
         println!("Running the deployment command: {} {} {}", env_var, command, command_args.join(" "));
 
@@ -84,7 +101,7 @@ fn main() {
         env::set_var(env_var_parts[0], env_var_parts[1]);
 
         // Create the CLI and capture the command output
-        let output = Command::new(command).args(command_args).output().expect("Failed to run command");
+        let output = Command::new(command).args(&command_args).output().expect("Failed to run command");
 
         // Process command output
         let output_str = String::from_utf8_lossy(&output.stdout);
