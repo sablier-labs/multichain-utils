@@ -76,7 +76,7 @@ fn main() {
         let command = "forge";
 
         let mut command_args =
-            vec!["script".to_string(), script_name.to_string(), "--rpc-url".to_string(), chain.to_string()];
+            vec!["script".to_string(), format!("script/{}", script_name), "--rpc-url".to_string(), chain.to_string()];
 
         if !broadcast_deployment.is_empty() {
             command_args.push(broadcast_deployment.to_string());
@@ -154,9 +154,23 @@ fn get_all_chains() -> Vec<String> {
 }
 
 fn move_broadcast_file(script_name: &str, chain: &str, output: &str, is_broadcast_deployment: bool) {
-    // Find the chain_id in the `output`
-    let chain_id =
-        output.split(&format!("broadcast/{}/", script_name)).nth(1).and_then(|s| s.split('/').next()).unwrap_or("");
+    let project = if script_name.starts_with("Protocol") || script_name.ends_with("Protocol") {
+        "lockup".to_string()
+    } else if script_name.contains("Flow") {
+        "flow".to_string()
+    } else if script_name.contains("MerkleFactory") {
+        "airdrops".to_string()
+    } else {
+        // skip this function if the script name doesn't match any of the above
+        return;
+    };
+
+    // Extract the chain_id from the output
+    let chain_id = output
+        .lines()
+        .find(|line| line.trim().starts_with("Chain "))
+        .and_then(|line| line.split_whitespace().nth(1))
+        .unwrap_or("");
 
     let broadcast_file_path = if is_broadcast_deployment {
         format!("broadcast/{}/{}/run-latest.json", script_name, chain_id)
@@ -170,7 +184,7 @@ fn move_broadcast_file(script_name: &str, chain: &str, output: &str, is_broadcas
         .to_string();
 
     // TODO: change this accordingly to: https://github.com/sablier-labs/v2-deployments/issues/10
-    let dest_path = format!("../v2-deployments/protocol/v{}/broadcasts/{}.json", version, chain);
+    let dest_path = format!("../v2-deployments/{}/v{}/broadcasts/{}.json", project, version, chain);
 
     // Create the parent directory if it doesn't exist
     if let Some(parent) = Path::new(&dest_path).parent() {
