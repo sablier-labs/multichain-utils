@@ -43,7 +43,7 @@ fn main() {
     // Use a default script if no script name is provided
     if script_name.is_empty() {
         script_name = "DeployProtocol.s.sol".to_string();
-        println!("No script name provided, using default script: {}", script_name);
+        println!("No script name provided, using default script: {}\n", script_name);
     }
 
     let chains = get_all_chains();
@@ -56,7 +56,7 @@ fn main() {
             if chains.contains(chain) {
                 true // Keep the element in the vector
             } else {
-                println!("Chain {} is not configured in the TOML file", chain);
+                println!("Chain {} is not configured in the TOML file \n", chain);
                 false // Remove the element from the vector
             }
         });
@@ -69,7 +69,7 @@ fn main() {
 
     // Output the list of unique chains
     let chains_string = provided_chains.clone().join(", ");
-    println!("Deploying to the chains: {}", chains_string);
+    println!("\nDeploying to the chains: {}\n", chains_string);
 
     for chain in provided_chains {
         let env_var = "FOUNDRY_PROFILE=optimized";
@@ -94,7 +94,7 @@ fn main() {
             command_args.push(format!("${}_API_KEY", chain.to_uppercase()));
         }
 
-        println!("Running the deployment command: {} {} {}", env_var, command, command_args.join(" "));
+        println!("Running the deployment command: {} {} {} \n", env_var, command, command_args.join(" "));
 
         // Set the environment variable
         let env_var_parts: Vec<&str> = env_var.split('=').collect();
@@ -106,9 +106,9 @@ fn main() {
         // Process command output
         let output_str = String::from_utf8_lossy(&output.stdout);
         if output.status.success() {
-            println!("Command output: {}", output_str);
+            println!("Command output: {}\n", output_str);
         } else {
-            eprintln!("Command failed with error: {}", String::from_utf8_lossy(&output.stderr));
+            eprintln!("Command failed with error: {}\n", String::from_utf8_lossy(&output.stderr));
         }
 
         // Move broadcast file if needed
@@ -127,7 +127,7 @@ fn get_all_chains() -> Vec<String> {
     let toml_content = match fs::read_to_string(toml_path) {
         Ok(content) => content,
         Err(_) => {
-            eprintln!("Failed to read the TOML file");
+            eprintln!("Failed to read the TOML file\n");
             return Vec::new();
         }
     };
@@ -135,7 +135,7 @@ fn get_all_chains() -> Vec<String> {
     let toml_values: TomlValue = match toml::from_str(&toml_content) {
         Ok(value) => value,
         Err(_) => {
-            eprintln!("Failed to parse TOML content");
+            eprintln!("Failed to parse TOML content\n");
             return Vec::new();
         }
     };
@@ -193,5 +193,6 @@ fn move_broadcast_file(script_name: &str, chain: &str, output: &str, is_broadcas
     }
 
     // Move and rename the file
-    fs::rename(&broadcast_file_path, &dest_path).expect("Failed to move and rename run-latest.json to v2-deployments");
+    fs::rename(&broadcast_file_path, &dest_path)
+        .expect("Failed to move and rename run-latest.json to v2-deployments\n");
 }
