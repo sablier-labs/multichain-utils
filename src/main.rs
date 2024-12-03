@@ -24,7 +24,7 @@ fn main() {
             "--script" => {
                 script_name = iter.next().expect("script name").to_string();
             }
-            "--broadcast" => broadcast_deployment = " --broadcast".to_string(),
+            "--broadcast" => broadcast_deployment = "--broadcast".to_string(),
             "--verify" => verify_deployment = true,
             "--gas-price" => {
                 let value = iter.next().expect("gas price value").to_string();
@@ -183,7 +183,6 @@ fn move_broadcast_file(script_name: &str, chain: &str, output: &str, is_broadcas
         .unwrap()
         .to_string();
 
-    // TODO: change this accordingly to: https://github.com/sablier-labs/v2-deployments/issues/10
     let dest_path = format!("../v2-deployments/{}/v{}/broadcasts/{}.json", project, version, chain);
 
     // Create the parent directory if it doesn't exist
