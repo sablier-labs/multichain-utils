@@ -11,7 +11,7 @@ This script offers a CLI tool designed to enhance the experience of deploying So
 ### Prerequisites
 
 - Rust and Cargo installed on your machine. See the installation guide [here](https://doc.rust-lang.org/cargo/getting-started/installation.html).
-- Foundry toolchain installed on your machine. See the installation guide[here](https://book.getfoundry.sh/getting-started/installation.html).
+- Foundry toolchain installed on your machine. See the installation guide [here](https://book.getfoundry.sh/getting-started/installation.html).
 
 ### Steps
 
