@@ -16,15 +16,15 @@ This script offers a CLI tool designed to enhance the experience of deploying So
 ### Steps
 
 ```bash
-git clone https://github.com/sablier-labs/deploy-multi-chain.git
-cd deploy-multi-chain
+git clone https://github.com/sablier-labs/multichain-deployer.git
+cd multichain-deployer
 cargo install --path . # Install the CLI locally
 ```
 
 ## Usage
 
 ```bash
-deploy-multi-chain <chain_name> [OPTIONS]
+multichain-deployer <chain_name> [OPTIONS]
 ```
 
 ### Flags:
@@ -38,7 +38,7 @@ deploy-multi-chain <chain_name> [OPTIONS]
 ### Example:
 
 ```bash
-deploy-multi-chain sepolia --script DeployFlow.s.sol
+multichain-deployer sepolia --script DeployFlow.s.sol
 ```
 
 **Output:**
