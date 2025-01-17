@@ -2,20 +2,7 @@ use serde_json::Value;
 use std::{env, fs, io::Write, path::Path, process::Command};
 use toml::Value as TomlValue;
 
-mod chain_map;
-
-struct Broadcast {
-    file_path: String,
-    chain_id: String,
-    project: String,
-    version: String,
-}
-
-impl Broadcast {
-    fn new() -> Self {
-        Broadcast { file_path: String::new(), chain_id: String::new(), project: String::new(), version: String::new() }
-    }
-}
+mod broadcast;
 
 fn main() {
     // Process command-line arguments
@@ -31,9 +18,6 @@ fn main() {
     let mut provided_chains = Vec::new();
     let mut script_name = "".to_string();
     let mut verify_deployment = false;
-
-    // Initialize Broadcast struct
-    let mut broadcast = Broadcast::new();
 
     // Parse all arguments
     while let Some(arg) = iter.next() {
@@ -137,54 +121,24 @@ fn main() {
             eprintln!("Command failed with error: {}\n", String::from_utf8_lossy(&output.stderr));
         }
 
-        // Identify the chain_id from the output
-        broadcast.chain_id = output_str
-            .lines()
-            .find(|line| line.trim().starts_with("Chain "))
-            .and_then(|line| line.split_whitespace().nth(1))
-            .unwrap_or("")
-            .to_string();
-
-        // Identify the project name
-        broadcast.project = if script_name.contains("Protocol") || script_name.contains("Lockup") {
-            "lockup".to_string()
-        } else if script_name.contains("Flow") {
-            "flow".to_string()
-        } else if script_name.contains("MerkleFactory") {
-            "airdrops".to_string()
-        } else {
-            // skip this function if the script name doesn't match any of the above
-            return;
-        };
-
-        // Read the version from package.json
-        broadcast.version = serde_json::from_str::<Value>(&fs::read_to_string("package.json").unwrap()).unwrap()
-            ["version"]
-            .as_str()
-            .unwrap()
-            .to_string();
-
-        // Read the broadcast file
-        broadcast.file_path = read_broadcast_file(&broadcast.chain_id, !broadcast_deployment.is_empty(), &script_name);
-
         if cp_broadcasted_file {
-            // Copy broadcast file
-            let dest_path =
-                format!("../v2-deployments/{}/v{}/broadcasts/{}.json", broadcast.project, &broadcast.version, chain);
-            copy_broadcast_file(&broadcast.file_path, &dest_path);
+
+            // use the broadcast implementation
         }
 
         if log_broadcasts {
-            // Generate the deployment table
-            let deployment_table = generate_deployment_table(&broadcast);
 
-            // Append the deployment table to the file
-            let mut file = fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(deployment_file)
-                .expect("Failed to open deployment file");
-            file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
+            // use the broadcast implementation
+
+            // let deployment_table = broadcast::Broadcast::new(&chain, &script_name, true).generate_deployment_table();
+
+            // // Append the deployment table to the file
+            // let mut file = fs::OpenOptions::new()
+            //     .append(true)
+            //     .create(true)
+            //     .open(deployment_file)
+            //     .expect("Failed to open deployment file");
+            // file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
         }
     }
 }
