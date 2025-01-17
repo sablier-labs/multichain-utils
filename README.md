@@ -1,4 +1,4 @@
-# Sablier Utility: Deploy multi chain
+# Multichain Deployer
 
 A Rust-based utility script for deploying Sablier contracts on multiple chains via a single CLI, meant to be used by the Sablier team.
 

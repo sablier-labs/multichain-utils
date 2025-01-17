@@ -1,6 +1,21 @@
 use serde_json::Value;
-use std::{env, fs, path::Path, process::Command};
+use std::{env, fs, io::Write, path::Path, process::Command};
 use toml::Value as TomlValue;
+
+mod chain_map;
+
+struct Broadcast {
+    file_path: String,
+    chain_id: String,
+    project: String,
+    version: String,
+}
+
+impl Broadcast {
+    fn new() -> Self {
+        Broadcast { file_path: String::new(), chain_id: String::new(), project: String::new(), version: String::new() }
+    }
+}
 
 fn main() {
     // Process command-line arguments
@@ -9,27 +24,32 @@ fn main() {
 
     // Variables to store flags and provided chains
     let mut broadcast_deployment = "".to_string();
-    let mut verify_deployment = false;
     let mut cp_broadcasted_file = false;
     let mut gas_price = "".to_string();
-    let mut script_name = "".to_string();
+    let mut log_broadcasts = false;
     let mut on_all_chains = false;
     let mut provided_chains = Vec::new();
+    let mut script_name = "".to_string();
+    let mut verify_deployment = false;
+
+    // Initialize Broadcast struct
+    let mut broadcast = Broadcast::new();
 
     // Parse all arguments
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--all" => on_all_chains = true,
-            "--cp-bf" => cp_broadcasted_file = true,
-            "--script" => {
-                script_name = iter.next().expect("script name").to_string();
-            }
             "--broadcast" => broadcast_deployment = "--broadcast".to_string(),
-            "--verify" => verify_deployment = true,
+            "--cp-bf" => cp_broadcasted_file = true,
             "--gas-price" => {
                 let value = iter.next().expect("gas price value").to_string();
                 gas_price = format!(" --gas-price {}", value);
             }
+            "--log" => log_broadcasts = true,
+            "--script" => {
+                script_name = iter.next().expect("script name").to_string();
+            }
+            "--verify" => verify_deployment = true,
             _ => {
                 if !arg.starts_with("--") && !on_all_chains {
                     provided_chains.push(arg.to_string());
@@ -71,6 +91,12 @@ fn main() {
     let chains_string = provided_chains.clone().join(", ");
     println!("\nDeploying to the chains: {}\n", chains_string);
 
+    // Delete the deployment file if it exists
+    let deployment_file = "deployments.md";
+    if fs::metadata(deployment_file).is_ok() {
+        fs::remove_file(deployment_file).expect("Cant delete deployment file");
+    }
+
     for chain in provided_chains {
         let env_var = "FOUNDRY_PROFILE=optimized";
         let command = "forge";
@@ -111,11 +137,145 @@ fn main() {
             eprintln!("Command failed with error: {}\n", String::from_utf8_lossy(&output.stderr));
         }
 
-        // Move broadcast file if needed
+        // Identify the chain_id from the output
+        broadcast.chain_id = output_str
+            .lines()
+            .find(|line| line.trim().starts_with("Chain "))
+            .and_then(|line| line.split_whitespace().nth(1))
+            .unwrap_or("")
+            .to_string();
+
+        // Identify the project name
+        broadcast.project = if script_name.contains("Protocol") || script_name.contains("Lockup") {
+            "lockup".to_string()
+        } else if script_name.contains("Flow") {
+            "flow".to_string()
+        } else if script_name.contains("MerkleFactory") {
+            "airdrops".to_string()
+        } else {
+            // skip this function if the script name doesn't match any of the above
+            return;
+        };
+
+        // Read the version from package.json
+        broadcast.version = serde_json::from_str::<Value>(&fs::read_to_string("package.json").unwrap()).unwrap()
+            ["version"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        // Read the broadcast file
+        broadcast.file_path = read_broadcast_file(&broadcast.chain_id, !broadcast_deployment.is_empty(), &script_name);
+
         if cp_broadcasted_file {
-            move_broadcast_file(&script_name, &chain, &output_str, !broadcast_deployment.is_empty());
+            // Copy broadcast file
+            let dest_path =
+                format!("../v2-deployments/{}/v{}/broadcasts/{}.json", broadcast.project, &broadcast.version, chain);
+            copy_broadcast_file(&broadcast.file_path, &dest_path);
+        }
+
+        if log_broadcasts {
+            // Generate the deployment table
+            let deployment_table = generate_deployment_table(&broadcast);
+
+            // Append the deployment table to the file
+            let mut file = fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(deployment_file)
+                .expect("Failed to open deployment file");
+            file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
         }
     }
+}
+
+// Create the row and enter it into the table
+fn add_to_table(
+    deployment_table: &mut String,
+    broadcast: &Broadcast,
+    contract_addr: &str,
+    contract_name: &str,
+) {
+    let row = format!(
+        "| {} | [{}]({}) | [v{}](https://github.com/sablier-labs/deployments/blob/main/{}/v{}) |",
+        contract_name,
+        contract_addr,
+        chain_map::explorer_url(&broadcast.chain_id, contract_addr),
+        &broadcast.version,
+        &broadcast.project,
+        &broadcast.version
+    );
+    deployment_table.push_str(&format!("{}\n", row.as_str()));
+}
+
+// Copy the broadcast file to the dest_path
+fn copy_broadcast_file(
+    src_path: &str,
+    dest_path: &str,
+) {
+    // Create the parent directory if it doesn't exist
+    if let Some(parent) = Path::new(&dest_path).parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent).expect("Failed to create directories");
+        }
+    }
+
+    // Copy and rename the file
+    fs::copy(src_path, dest_path).expect("Failed to copy and rename run-latest.json to v2-deployments\n");
+}
+
+// Generate the deployment table
+fn generate_deployment_table(broadcast: &Broadcast) -> String {
+    // Read the broadcast JSON object.
+    let json_content = fs::read_to_string(&broadcast.file_path).expect("Failed to read the broadcast file");
+    let json_value: Value = serde_json::from_str(&json_content).expect("Failed to parse JSON");
+
+    // Prepare the table headers.
+    let mut deployment_table = format!(
+        "## {}\n\n| Contract | Address | Deployment |\n| :------- | :------ | :----------|\n",
+        chain_map::chain_name(&broadcast.chain_id)
+    );
+
+    // Look for libraries and add to table if found.
+    if let Some(libraries) = json_value.get("libraries").and_then(|v| v.as_array()) {
+        for library in libraries {
+            match library.as_str() {
+                Some(library_str) => {
+                    let library_name = library_str.split(':').collect::<Vec<&str>>()[1];
+                    let library_addr = library_str.split(':').collect::<Vec<&str>>()[2];
+                    add_to_table(&mut deployment_table, broadcast, library_addr, library_name);
+                }
+                None => eprintln!("Expected an array of libraries."),
+            }
+        }
+    }
+
+    // Loop over the "returns" object.
+    if let Some(returned_obj) = json_value.get("returns").and_then(|v| v.as_object()) {
+        for (_, value) in returned_obj {
+            // Check for the "internal_type" object which should be of the format "contract CONTRACT_NAME"
+            if let Some(contract_name) = value.get("internal_type").and_then(|v| v.as_str()) {
+                let internal_type_value: Vec<&str> = contract_name.split_whitespace().collect();
+                if let Some(contract_name) = internal_type_value.last() {
+                    // If the contract name is found, look for contract address
+                    if let Some(contract_addr) = value.get("value").and_then(|v| v.as_str()) {
+                        // Format the dta and push it to the table
+                        add_to_table(&mut deployment_table, broadcast, contract_addr, contract_name);
+                    } else {
+                        eprintln!("Expected 'value' key");
+                    }
+                }
+            } else {
+                eprintln!("Expected 'internal_type' key");
+            }
+        }
+    }
+
+    // Add a newline to separate the tables for different chain ids
+    deployment_table.push('\n');
+
+    // Return the deployment table
+    deployment_table
 }
 
 // Function that reads the TOML chain configurations and extracts them
@@ -153,46 +313,15 @@ fn get_all_chains() -> Vec<String> {
     chains.into_iter().collect()
 }
 
-fn move_broadcast_file(script_name: &str, chain: &str, output: &str, is_broadcast_deployment: bool) {
-    let project = if script_name.starts_with("Protocol") || script_name.ends_with("Protocol") {
-        "lockup".to_string()
-    } else if script_name.contains("Flow") {
-        "flow".to_string()
-    } else if script_name.contains("MerkleFactory") {
-        "airdrops".to_string()
-    } else {
-        // skip this function if the script name doesn't match any of the above
-        return;
-    };
-
-    // Extract the chain_id from the output
-    let chain_id = output
-        .lines()
-        .find(|line| line.trim().starts_with("Chain "))
-        .and_then(|line| line.split_whitespace().nth(1))
-        .unwrap_or("");
-
-    let broadcast_file_path = if is_broadcast_deployment {
+// Read broadcast file
+fn read_broadcast_file(
+    chain_id: &str,
+    is_broadcast_deployment: bool,
+    script_name: &str,
+) -> String {
+    if is_broadcast_deployment {
         format!("broadcast/{}/{}/run-latest.json", script_name, chain_id)
     } else {
         format!("broadcast/{}/{}/dry-run/run-latest.json", script_name, chain_id)
-    };
-
-    let version = serde_json::from_str::<Value>(&fs::read_to_string("package.json").unwrap()).unwrap()["version"]
-        .as_str()
-        .unwrap()
-        .to_string();
-
-    let dest_path = format!("../v2-deployments/{}/v{}/broadcasts/{}.json", project, version, chain);
-
-    // Create the parent directory if it doesn't exist
-    if let Some(parent) = Path::new(&dest_path).parent() {
-        if !parent.exists() {
-            fs::create_dir_all(parent).expect("Failed to create directories");
-        }
     }
-
-    // Move and rename the file
-    fs::rename(&broadcast_file_path, &dest_path)
-        .expect("Failed to move and rename run-latest.json to v2-deployments\n");
 }
