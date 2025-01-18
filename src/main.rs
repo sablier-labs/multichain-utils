@@ -1,8 +1,8 @@
-use serde_json::Value;
 use std::{env, fs, io::Write, path::Path, process::Command};
 use toml::Value as TomlValue;
 
 mod broadcast;
+use broadcast::broadcast::Broadcast;
 
 fn main() {
     // Process command-line arguments
@@ -10,7 +10,7 @@ fn main() {
     let mut iter = args.iter().skip(1);
 
     // Variables to store flags and provided chains
-    let mut broadcast_deployment = "".to_string();
+    let mut broadcast_deployment = false;
     let mut cp_broadcasted_file = false;
     let mut gas_price = "".to_string();
     let mut log_broadcasts = false;
@@ -23,7 +23,7 @@ fn main() {
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--all" => on_all_chains = true,
-            "--broadcast" => broadcast_deployment = "--broadcast".to_string(),
+            "--broadcast" => broadcast_deployment = true,
             "--cp-bf" => cp_broadcasted_file = true,
             "--gas-price" => {
                 let value = iter.next().expect("gas price value").to_string();
@@ -88,8 +88,8 @@ fn main() {
         let mut command_args =
             vec!["script".to_string(), format!("script/{}", script_name), "--rpc-url".to_string(), chain.to_string()];
 
-        if !broadcast_deployment.is_empty() {
-            command_args.push(broadcast_deployment.to_string());
+        if broadcast_deployment {
+            command_args.push("--broadcast".to_string());
         }
 
         if !gas_price.is_empty() {
@@ -121,115 +121,26 @@ fn main() {
             eprintln!("Command failed with error: {}\n", String::from_utf8_lossy(&output.stderr));
         }
 
-        if cp_broadcasted_file {
+        // Initialize the `Broadcast` instance
+        let broadcast = Broadcast::new(&output_str, &script_name, broadcast_deployment)
+            .expect("Failed to create Broadcast instance");
 
-            // use the broadcast implementation
+        if cp_broadcasted_file {
+            broadcast.copy_broadcast_file(&chain);
         }
 
         if log_broadcasts {
+            let deployment_table = broadcast.generate_deployment_table();
 
-            // use the broadcast implementation
-
-            // let deployment_table = broadcast::Broadcast::new(&chain, &script_name, true).generate_deployment_table();
-
-            // // Append the deployment table to the file
-            // let mut file = fs::OpenOptions::new()
-            //     .append(true)
-            //     .create(true)
-            //     .open(deployment_file)
-            //     .expect("Failed to open deployment file");
-            // file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
+            // Append the deployment table to the file
+            let mut file = fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(deployment_file)
+                .expect("Failed to open deployment file");
+            file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
         }
     }
-}
-
-// Create the row and enter it into the table
-fn add_to_table(
-    deployment_table: &mut String,
-    broadcast: &Broadcast,
-    contract_addr: &str,
-    contract_name: &str,
-) {
-    let row = format!(
-        "| {} | [{}]({}) | [v{}](https://github.com/sablier-labs/deployments/blob/main/{}/v{}) |",
-        contract_name,
-        contract_addr,
-        chain_map::explorer_url(&broadcast.chain_id, contract_addr),
-        &broadcast.version,
-        &broadcast.project,
-        &broadcast.version
-    );
-    deployment_table.push_str(&format!("{}\n", row.as_str()));
-}
-
-// Copy the broadcast file to the dest_path
-fn copy_broadcast_file(
-    src_path: &str,
-    dest_path: &str,
-) {
-    // Create the parent directory if it doesn't exist
-    if let Some(parent) = Path::new(&dest_path).parent() {
-        if !parent.exists() {
-            fs::create_dir_all(parent).expect("Failed to create directories");
-        }
-    }
-
-    // Copy and rename the file
-    fs::copy(src_path, dest_path).expect("Failed to copy and rename run-latest.json to v2-deployments\n");
-}
-
-// Generate the deployment table
-fn generate_deployment_table(broadcast: &Broadcast) -> String {
-    // Read the broadcast JSON object.
-    let json_content = fs::read_to_string(&broadcast.file_path).expect("Failed to read the broadcast file");
-    let json_value: Value = serde_json::from_str(&json_content).expect("Failed to parse JSON");
-
-    // Prepare the table headers.
-    let mut deployment_table = format!(
-        "## {}\n\n| Contract | Address | Deployment |\n| :------- | :------ | :----------|\n",
-        chain_map::chain_name(&broadcast.chain_id)
-    );
-
-    // Look for libraries and add to table if found.
-    if let Some(libraries) = json_value.get("libraries").and_then(|v| v.as_array()) {
-        for library in libraries {
-            match library.as_str() {
-                Some(library_str) => {
-                    let library_name = library_str.split(':').collect::<Vec<&str>>()[1];
-                    let library_addr = library_str.split(':').collect::<Vec<&str>>()[2];
-                    add_to_table(&mut deployment_table, broadcast, library_addr, library_name);
-                }
-                None => eprintln!("Expected an array of libraries."),
-            }
-        }
-    }
-
-    // Loop over the "returns" object.
-    if let Some(returned_obj) = json_value.get("returns").and_then(|v| v.as_object()) {
-        for (_, value) in returned_obj {
-            // Check for the "internal_type" object which should be of the format "contract CONTRACT_NAME"
-            if let Some(contract_name) = value.get("internal_type").and_then(|v| v.as_str()) {
-                let internal_type_value: Vec<&str> = contract_name.split_whitespace().collect();
-                if let Some(contract_name) = internal_type_value.last() {
-                    // If the contract name is found, look for contract address
-                    if let Some(contract_addr) = value.get("value").and_then(|v| v.as_str()) {
-                        // Format the dta and push it to the table
-                        add_to_table(&mut deployment_table, broadcast, contract_addr, contract_name);
-                    } else {
-                        eprintln!("Expected 'value' key");
-                    }
-                }
-            } else {
-                eprintln!("Expected 'internal_type' key");
-            }
-        }
-    }
-
-    // Add a newline to separate the tables for different chain ids
-    deployment_table.push('\n');
-
-    // Return the deployment table
-    deployment_table
 }
 
 // Function that reads the TOML chain configurations and extracts them
@@ -265,17 +176,4 @@ fn get_all_chains() -> Vec<String> {
     }
 
     chains.into_iter().collect()
-}
-
-// Read broadcast file
-fn read_broadcast_file(
-    chain_id: &str,
-    is_broadcast_deployment: bool,
-    script_name: &str,
-) -> String {
-    if is_broadcast_deployment {
-        format!("broadcast/{}/{}/run-latest.json", script_name, chain_id)
-    } else {
-        format!("broadcast/{}/{}/dry-run/run-latest.json", script_name, chain_id)
-    }
 }
