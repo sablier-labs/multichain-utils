@@ -43,14 +43,11 @@ impl Broadcast {
             .unwrap()
             .to_string();
 
-        let file_path;
-
-        // Determine the file path
-        if is_broadcast_deployment {
-            file_path = format!("broadcast/{}/{}/run-latest.json", script_name, chain_id)
+        let file_path = if is_broadcast_deployment {
+            format!("broadcast/{}/{}/run-latest.json", script_name, chain_id)
         } else {
-            file_path = format!("broadcast/{}/{}/dry-run/run-latest.json", script_name, chain_id)
-        }
+            format!("broadcast/{}/{}/dry-run/run-latest.json", script_name, chain_id)
+        };
 
         Some(Broadcast { chain_id, project, version, file_path })
     }
@@ -60,7 +57,7 @@ impl Broadcast {
         &self,
         chain: &str,
     ) {
-        let dest_path = format!("../v2-deployments/{}/v{}/broadcasts/{}.json", self.project, self.version, chain);
+        let dest_path = format!("../deployments/{}/v{}/broadcasts/{}.json", self.project, self.version, chain);
 
         // Ensure the parent directory exists
         if let Some(parent) = Path::new(&dest_path).parent() {
@@ -70,7 +67,7 @@ impl Broadcast {
         }
 
         // Copy the file
-        fs::copy(&self.file_path, &dest_path).expect("Failed to copy and rename run-latest.json to v2-deployments");
+        fs::copy(&self.file_path, &dest_path).expect("Failed to copy and rename run-latest.json to deployments");
     }
 
     // Generate the deployment table for this broadcast
@@ -87,17 +84,9 @@ impl Broadcast {
             chain_map::chain_name(&self.chain_id)
         );
 
-        // Extract libraries and contracts, and add to the table
-        json_value.get("libraries").and_then(|v| v.as_array()).map(|libraries| {
-            libraries.iter().filter_map(|lib| lib.as_str()).for_each(|library_str| {
-                let parts: Vec<&str> = library_str.split(':').collect();
-                if parts.len() >= 3 {
-                    self.add_to_table(&mut deployment_table, parts[2], parts[1]);
-                }
-            });
-        });
-
-        json_value.get("returns").and_then(|v| v.as_object()).map(|returned_obj| {
+        // The format of the JSON can be viewed here: https://github.com/sablier-labs/deployments/blob/main/
+        // Extract returned contracts from the JSON file and add to the table
+        if let Some(returned_obj) = json_value.get("returns").and_then(|v| v.as_object()) {
             returned_obj.values().for_each(|value| {
                 if let (Some(internal_type), Some(contract_addr)) =
                     (value.get("internal_type").and_then(|v| v.as_str()), value.get("value").and_then(|v| v.as_str()))
@@ -107,7 +96,16 @@ impl Broadcast {
                     }
                 }
             });
-        });
+        }
+        // Extract libraries and contracts from the JSON file and add to the table
+        if let Some(libraries) = json_value.get("libraries").and_then(|v| v.as_array()) {
+            libraries.iter().filter_map(|lib| lib.as_str()).for_each(|library_str| {
+                let parts: Vec<&str> = library_str.split(':').collect();
+                if parts.len() >= 3 {
+                    self.add_to_table(&mut deployment_table, parts[2], parts[1]);
+                }
+            });
+        }
 
         deployment_table.push('\n');
         deployment_table
