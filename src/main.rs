@@ -75,12 +75,6 @@ fn main() {
     let chains_string = provided_chains.clone().join(", ");
     println!("\nDeploying to the chains: {}\n", chains_string);
 
-    // Delete the deployment file if it exists
-    let deployment_file = "deployments.md";
-    if fs::metadata(deployment_file).is_ok() {
-        fs::remove_file(deployment_file).expect("Cant delete deployment file");
-    }
-
     for chain in provided_chains {
         let env_var = "FOUNDRY_PROFILE=optimized";
         let command = "forge";
@@ -136,7 +130,7 @@ fn main() {
             let mut file = fs::OpenOptions::new()
                 .append(true)
                 .create(true)
-                .open(deployment_file)
+                .open("deployments.md")
                 .expect("Failed to open deployment file");
             file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
         }
