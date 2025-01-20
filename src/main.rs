@@ -1,6 +1,8 @@
-use serde_json::Value;
-use std::{env, fs, path::Path, process::Command};
+use std::{env, fs, io::Write, path::Path, process::Command};
 use toml::Value as TomlValue;
+
+mod utils;
+use utils::Broadcast;
 
 fn main() {
     // Process command-line arguments
@@ -8,28 +10,30 @@ fn main() {
     let mut iter = args.iter().skip(1);
 
     // Variables to store flags and provided chains
-    let mut broadcast_deployment = "".to_string();
-    let mut verify_deployment = false;
+    let mut broadcast_deployment = false;
     let mut cp_broadcasted_file = false;
     let mut gas_price = "".to_string();
-    let mut script_name = "".to_string();
+    let mut log_broadcasts = false;
     let mut on_all_chains = false;
     let mut provided_chains = Vec::new();
+    let mut script_name = "".to_string();
+    let mut verify_deployment = false;
 
     // Parse all arguments
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--all" => on_all_chains = true,
+            "--broadcast" => broadcast_deployment = true,
             "--cp-bf" => cp_broadcasted_file = true,
-            "--script" => {
-                script_name = iter.next().expect("script name").to_string();
-            }
-            "--broadcast" => broadcast_deployment = "--broadcast".to_string(),
-            "--verify" => verify_deployment = true,
             "--gas-price" => {
                 let value = iter.next().expect("gas price value").to_string();
                 gas_price = format!(" --gas-price {}", value);
             }
+            "--log" => log_broadcasts = true,
+            "--script" => {
+                script_name = iter.next().expect("script name").to_string();
+            }
+            "--verify" => verify_deployment = true,
             _ => {
                 if !arg.starts_with("--") && !on_all_chains {
                     provided_chains.push(arg.to_string());
@@ -78,8 +82,8 @@ fn main() {
         let mut command_args =
             vec!["script".to_string(), format!("script/{}", script_name), "--rpc-url".to_string(), chain.to_string()];
 
-        if !broadcast_deployment.is_empty() {
-            command_args.push(broadcast_deployment.to_string());
+        if broadcast_deployment {
+            command_args.push("--broadcast".to_string());
         }
 
         if !gas_price.is_empty() {
@@ -111,9 +115,24 @@ fn main() {
             eprintln!("Command failed with error: {}\n", String::from_utf8_lossy(&output.stderr));
         }
 
-        // Move broadcast file if needed
+        // Initialize the `Broadcast` instance
+        let broadcast = Broadcast::new(&output_str, &script_name, broadcast_deployment)
+            .expect("Failed to create Broadcast instance");
+
         if cp_broadcasted_file {
-            move_broadcast_file(&script_name, &chain, &output_str, !broadcast_deployment.is_empty());
+            broadcast.copy_broadcast_file(&chain);
+        }
+
+        if log_broadcasts {
+            let deployment_table = broadcast.generate_deployment_table();
+
+            // Append the deployment table to the file
+            let mut file = fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open("deployments.md")
+                .expect("Failed to open deployment file");
+            file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
         }
     }
 }
@@ -151,48 +170,4 @@ fn get_all_chains() -> Vec<String> {
     }
 
     chains.into_iter().collect()
-}
-
-fn move_broadcast_file(script_name: &str, chain: &str, output: &str, is_broadcast_deployment: bool) {
-    let project = if script_name.starts_with("Protocol") || script_name.ends_with("Protocol") {
-        "lockup".to_string()
-    } else if script_name.contains("Flow") {
-        "flow".to_string()
-    } else if script_name.contains("MerkleFactory") {
-        "airdrops".to_string()
-    } else {
-        // skip this function if the script name doesn't match any of the above
-        return;
-    };
-
-    // Extract the chain_id from the output
-    let chain_id = output
-        .lines()
-        .find(|line| line.trim().starts_with("Chain "))
-        .and_then(|line| line.split_whitespace().nth(1))
-        .unwrap_or("");
-
-    let broadcast_file_path = if is_broadcast_deployment {
-        format!("broadcast/{}/{}/run-latest.json", script_name, chain_id)
-    } else {
-        format!("broadcast/{}/{}/dry-run/run-latest.json", script_name, chain_id)
-    };
-
-    let version = serde_json::from_str::<Value>(&fs::read_to_string("package.json").unwrap()).unwrap()["version"]
-        .as_str()
-        .unwrap()
-        .to_string();
-
-    let dest_path = format!("../v2-deployments/{}/v{}/broadcasts/{}.json", project, version, chain);
-
-    // Create the parent directory if it doesn't exist
-    if let Some(parent) = Path::new(&dest_path).parent() {
-        if !parent.exists() {
-            fs::create_dir_all(parent).expect("Failed to create directories");
-        }
-    }
-
-    // Move and rename the file
-    fs::rename(&broadcast_file_path, &dest_path)
-        .expect("Failed to move and rename run-latest.json to v2-deployments\n");
 }
