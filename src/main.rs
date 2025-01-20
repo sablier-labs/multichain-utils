@@ -2,7 +2,7 @@ use std::{env, fs, io::Write, path::Path, process::Command};
 use toml::Value as TomlValue;
 
 mod utils;
-use utils::Broadcast;
+use utils::{constants, Broadcast};
 
 fn main() {
     // Process command-line arguments
@@ -22,6 +22,10 @@ fn main() {
     // Parse all arguments
     while let Some(arg) = iter.next() {
         match arg.as_str() {
+            "--help" => {
+                display_message();
+                return;
+            }
             "--all" => on_all_chains = true,
             "--broadcast" => broadcast_deployment = true,
             "--cp-bf" => cp_broadcasted_file = true,
@@ -135,6 +139,11 @@ fn main() {
             file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
         }
     }
+}
+
+// Function to display the help message
+pub fn display_message() {
+    println!("{}", constants::HELP_MESSAGE);
 }
 
 // Function that reads the TOML chain configurations and extracts them
