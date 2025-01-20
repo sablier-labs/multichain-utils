@@ -1,8 +1,8 @@
 use std::{env, fs, io::Write, path::Path, process::Command};
 use toml::Value as TomlValue;
 
-mod broadcast;
-use broadcast::broadcast::Broadcast;
+mod utils;
+use utils::Broadcast;
 
 fn main() {
     // Process command-line arguments

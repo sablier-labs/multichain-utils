@@ -52,6 +52,25 @@ impl Broadcast {
         Some(Broadcast { chain_id, project, version, file_path })
     }
 
+    // Helper to format and add rows to the table
+    fn add_to_table(
+        &self,
+        deployment_table: &mut String,
+        contract_addr: &str,
+        contract_name: &str,
+    ) {
+        let row = format!(
+            "| {} | [{}]({}) | [v{}](https://github.com/sablier-labs/deployments/blob/main/{}/v{}) |\n",
+            contract_name,
+            contract_addr,
+            chain_map::explorer_url(&self.chain_id, contract_addr),
+            &self.version,
+            &self.project,
+            &self.version
+        );
+        deployment_table.push_str(&row);
+    }
+
     // Copy the broadcast file to the specified destination path
     pub fn copy_broadcast_file(
         &self,
@@ -109,24 +128,5 @@ impl Broadcast {
 
         deployment_table.push('\n');
         deployment_table
-    }
-
-    // Helper to format and add rows to the table
-    fn add_to_table(
-        &self,
-        deployment_table: &mut String,
-        contract_addr: &str,
-        contract_name: &str,
-    ) {
-        let row = format!(
-            "| {} | [{}]({}) | [v{}](https://github.com/sablier-labs/deployments/blob/main/{}/v{}) |\n",
-            contract_name,
-            contract_addr,
-            chain_map::explorer_url(&self.chain_id, contract_addr),
-            &self.version,
-            &self.project,
-            &self.version
-        );
-        deployment_table.push_str(&row);
     }
 }
