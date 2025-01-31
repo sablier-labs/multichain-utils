@@ -79,7 +79,7 @@ pub fn explorer_url(
         "80084" => "https://sepolia.berachain.io/address/",
         "168587773" => "https://sepolia.blastscan.io/address/",
         "59141" => "https://sepolia.lineascan.build/address/",
-        "919" => "https://sepolia.mode.network/address/",
+        "919" => "https://sepolia.explorer.mode.network/address/",
         "2810" => "https://sepolia.morphl2.io/address/",
         "11155420" => "https://sepolia.optimistic.etherscan.io/address/",
         "974399131" => "https://sepolia.skale.io/address/",
