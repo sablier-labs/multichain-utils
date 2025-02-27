@@ -30,7 +30,7 @@ impl Broadcast {
             "lockup".to_string()
         } else if script_name.contains("Flow") {
             "flow".to_string()
-        } else if script_name.contains("MerkleFactory") {
+        } else if script_name.contains("MerkleFactory") || script_name.contains("MerkleFactories") {
             "airdrops".to_string()
         } else {
             // Return None if the script name doesn't match any of the above
