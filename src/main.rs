@@ -48,10 +48,10 @@ fn main() {
         }
     }
 
-    // Use a default script if no script name is provided
+    // Check if a script name was provided
     if script_name.is_empty() {
-        script_name = "DeployProtocol.s.sol".to_string();
-        println!("No script name provided, using default script: {}\n", script_name);
+        println!("No script was provided");
+        return;
     }
 
     let chains = get_all_chains();
