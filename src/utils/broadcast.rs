@@ -1,7 +1,7 @@
 use serde_json::Value;
 use std::{fs, path::Path};
 
-use super::chain_map;
+use super::chain_data;
 
 pub struct Broadcast {
     file_path: String,
@@ -63,7 +63,7 @@ impl Broadcast {
             "| {} | [{}]({}) | [v{}](https://github.com/sablier-labs/deployments/blob/main/{}/v{}) |\n",
             contract_name,
             contract_addr,
-            chain_map::explorer_url(&self.chain_id, contract_addr),
+            chain_data::get_explorer(&self.chain_id, contract_addr),
             &self.version,
             &self.project,
             &self.version
@@ -100,7 +100,7 @@ impl Broadcast {
         // Prepare the table headers
         let mut deployment_table = format!(
             "## {}\n\n| Contract | Address | Deployment |\n| :------- | :------ | :----------|\n",
-            chain_map::chain_name(&self.chain_id)
+            chain_data::get_name(&self.chain_id)
         );
 
         // The format of the JSON can be viewed here: https://github.com/sablier-labs/deployments/blob/main/
