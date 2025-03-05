@@ -100,12 +100,9 @@ fn main() {
             command_args.push(gas_price.to_string());
         }
 
-        // Push the verify flag and etherscan API key. We need to it separately because otherwise they would be treated
-        // as a single argument.
+        // Extend the command arguments with each verifier flag separately.
         if verify_deployment {
-            command_args.push("--verify".to_string());
-            command_args.push("--etherscan-api-key".to_string());
-            command_args.push(format!("${}_API_KEY", chain.to_uppercase()));
+            command_args.extend(get_verifier_flags(&chain));
         }
 
         // Push the sender flag.
@@ -119,8 +116,8 @@ fn main() {
         // Push the sender address.
         command_args.push(sender.to_string());
 
-        // Add the legacy flag for the "linea" and "chiliz" chains, due to the lack of EIP-3855 support.
-        if chain.eq("linea") || chain.eq("chiliz") {
+        // Add the legacy flag for the "chiliz", "form, and "linea" chains, due to the lack of EIP-3855 support.
+        if chain.eq("chiliz") || chain.eq("form") || chain.eq("linea") {
             command_args.push("--legacy".to_string());
         }
 
@@ -201,4 +198,31 @@ fn get_all_chains() -> Vec<String> {
     }
 
     chains.into_iter().collect()
+}
+
+fn get_verifier_flags(chain: &str) -> Vec<String> {
+    // Start by adding the common flags.
+    let mut args = vec!["--verify".to_string()];
+
+    args.push("--etherscan-api-key".to_string());
+
+    // For the non-etherscan based explorer chains.
+    if chain.eq("form") || chain.eq("lightlink") || chain.eq("mode") || chain.eq("morph") || chain.eq("superseed") {
+        // Add the verifyContract flag and the verifier URL.
+        args.push("\"verifyContract\"".to_string());
+        let explorer_url = utils::chain_data::get_explorer_url_by_name(chain);
+        args.push("--verifier-url".to_string());
+        // Append "api\?" to the explorer URL to form the verifier URL.
+        args.push(format!("{}api\\?", explorer_url));
+    } else if chain.eq("chiliz") {
+        args.push("\"verifyContract\"".to_string());
+        // For the "chiliz" chain, use a specific routescan URL.
+        args.push("--verifier-url".to_string());
+        args.push("https://api.routescan.io/v2/network/mainnet/evm/88888/etherscan".to_string());
+    } else {
+        // For other chains, etherscan based, use the API key.
+        args.push(format!("${}_API_KEY", chain.to_uppercase()));
+    }
+
+    args
 }
