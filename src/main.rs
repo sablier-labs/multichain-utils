@@ -102,6 +102,11 @@ fn main() {
             command_args.push(format!("${}_API_KEY", chain.to_uppercase()));
         }
 
+        // Add the legacy flag for the "linea" and "chiliz" chains, due to the lack of EIP-3855 support.
+        if chain.eq("linea") || chain.eq("chiliz") {
+            command_args.push("--legacy".to_string());
+        }
+
         println!("Running the deployment command: {} {} {} \n", env_var, command, command_args.join(" "));
 
         // Set the environment variable
