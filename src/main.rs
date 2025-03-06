@@ -16,7 +16,7 @@ fn main() {
     let mut log_broadcasts = false;
     let mut on_all_chains = false;
     let mut provided_chains = Vec::new();
-    let mut sender = format!(" --sender {}", constants::DEFAULT_DEPLOYER.to_string());
+    let mut sender = format!(" --sender {}", constants::DEFAULT_DEPLOYER);
     let mut script_name = "".to_string();
     let mut verify_deployment = false;
 
