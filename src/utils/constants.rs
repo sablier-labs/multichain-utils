@@ -1,3 +1,6 @@
+// Default Sablier deployer address as a string.
+pub const DEFAULT_DEPLOYER: &str = "0xb1bEF51ebCA01EB12001a639bDBbFF6eEcA12B9F";
+
 // A help message for the CLI tool that is displayed when the `--help` flag is passed.
 pub const HELP_MESSAGE: &str = r#"
 Usage:

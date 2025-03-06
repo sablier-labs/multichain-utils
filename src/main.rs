@@ -16,6 +16,7 @@ fn main() {
     let mut log_broadcasts = false;
     let mut on_all_chains = false;
     let mut provided_chains = Vec::new();
+    let mut sender = format!(" --sender {}", constants::DEFAULT_DEPLOYER.to_string());
     let mut script_name = "".to_string();
     let mut verify_deployment = false;
 
@@ -36,6 +37,10 @@ fn main() {
             "--log" => log_broadcasts = true,
             "--script" => {
                 script_name = iter.next().expect("script name").to_string();
+            }
+            "--sender" => {
+                let sender_address = iter.next().expect("sender address").to_string();
+                sender = format!(" --sender {}", sender_address);
             }
             "--verify" => verify_deployment = true,
             _ => {
@@ -106,6 +111,9 @@ fn main() {
         if chain.eq("linea") || chain.eq("chiliz") {
             command_args.push("--legacy".to_string());
         }
+
+        // Add the sender flag
+        command_args.push(sender.clone());
 
         println!("Running the deployment command: {} {} {} \n", env_var, command, command_args.join(" "));
 
