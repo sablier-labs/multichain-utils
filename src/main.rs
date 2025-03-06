@@ -16,7 +16,7 @@ fn main() {
     let mut log_broadcasts = false;
     let mut on_all_chains = false;
     let mut provided_chains = Vec::new();
-    let mut sender = format!(" --sender {}", constants::DEFAULT_DEPLOYER);
+    let mut sender = "".to_string();
     let mut script_name = "".to_string();
     let mut verify_deployment = false;
 
@@ -32,7 +32,7 @@ fn main() {
             "--cp-bf" => cp_broadcasted_file = true,
             "--gas-price" => {
                 let value = iter.next().expect("gas price value").to_string();
-                gas_price = format!(" --gas-price {}", value);
+                gas_price = value.to_string();
             }
             "--log" => log_broadcasts = true,
             "--script" => {
@@ -40,7 +40,7 @@ fn main() {
             }
             "--sender" => {
                 let sender_address = iter.next().expect("sender address").to_string();
-                sender = format!(" --sender {}", sender_address);
+                sender = sender_address.to_string();
             }
             "--verify" => verify_deployment = true,
             _ => {
@@ -96,6 +96,7 @@ fn main() {
         }
 
         if !gas_price.is_empty() {
+            command_args.push("--gas-price".to_string());
             command_args.push(gas_price.to_string());
         }
 
@@ -107,13 +108,21 @@ fn main() {
             command_args.push(format!("${}_API_KEY", chain.to_uppercase()));
         }
 
+        // Push the sender flag.
+        command_args.push("--sender".to_string());
+
+        // If no sender address was passed, use the default one.
+        if sender.is_empty() {
+            sender = constants::DEFAULT_DEPLOYER.to_string();
+        }
+
+        // Push the sender address.
+        command_args.push(sender.to_string());
+
         // Add the legacy flag for the "linea" and "chiliz" chains, due to the lack of EIP-3855 support.
         if chain.eq("linea") || chain.eq("chiliz") {
             command_args.push("--legacy".to_string());
         }
-
-        // Add the sender flag
-        command_args.push(sender.clone());
 
         println!("Running the deployment command: {} {} {} \n", env_var, command, command_args.join(" "));
 
