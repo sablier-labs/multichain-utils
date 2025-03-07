@@ -48,6 +48,19 @@ const CHAINS: &[(&str, ChainData)] = &[
     ("300", ChainData { name: "zkSync Sepolia", explorer_url: "https://sepolia.zksync.network/" }),
 ];
 
+/// Returns the chain id for a given partial or complete chain name.
+/// The search is performed in a case-insensitive manner. If a match is found (i.e. the chain's
+/// name contains the provided query), the corresponding chain id is returned.
+/// Otherwise, it returns the provided chain_name.
+pub fn get_chain_id(chain_name: &str) -> &str {
+    let query = chain_name.to_lowercase();
+    CHAINS
+        .iter()
+        .find(|(_, data)| data.name.to_lowercase().contains(&query))
+        .map(|(chain_id, _)| *chain_id)
+        .unwrap_or(chain_name)
+}
+
 /// Returns the chain data for a given chain_id, if it exists.
 pub fn get_data(chain_id: &str) -> Option<&'static ChainData> {
     CHAINS.iter().find(|entry| entry.0 == chain_id).map(|entry| &entry.1)
