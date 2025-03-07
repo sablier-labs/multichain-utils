@@ -2,7 +2,7 @@ use std::{env, fs, io::Write, path::Path, process::Command};
 use toml::Value as TomlValue;
 
 mod utils;
-use utils::{constants, Broadcast};
+use utils::{constants, verify, Broadcast};
 
 fn main() {
     // Process command-line arguments
@@ -84,7 +84,8 @@ fn main() {
     let chains_string = provided_chains.clone().join(", ");
     println!("\nDeploying to the chains: {}\n", chains_string);
 
-    for chain in provided_chains {
+    // Iterate over the provided chains and run the deployment command
+    for chain in &provided_chains {
         let env_var = "FOUNDRY_PROFILE=optimized";
         let command = "forge";
 
@@ -98,11 +99,6 @@ fn main() {
         if !gas_price.is_empty() {
             command_args.push("--gas-price".to_string());
             command_args.push(gas_price.to_string());
-        }
-
-        // Extend the command arguments with each verifier flag separately.
-        if verify_deployment {
-            command_args.extend(get_verifier_flags(&chain));
         }
 
         // Push the sender flag.
@@ -143,7 +139,7 @@ fn main() {
             .expect("Failed to create Broadcast instance");
 
         if cp_broadcasted_file {
-            broadcast.copy_broadcast_file(&chain);
+            broadcast.copy_broadcast_file(chain);
         }
 
         if log_broadcasts {
@@ -157,6 +153,11 @@ fn main() {
                 .expect("Failed to open deployment file");
             file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
         }
+    }
+
+    // If the verify flag is set, run the verification process
+    if verify_deployment {
+        verify::verify_contracts(&script_name, &provided_chains);
     }
 }
 
@@ -198,31 +199,4 @@ fn get_all_chains() -> Vec<String> {
     }
 
     chains.into_iter().collect()
-}
-
-fn get_verifier_flags(chain: &str) -> Vec<String> {
-    // Start by adding the common flags.
-    let mut args = vec!["--verify".to_string()];
-
-    args.push("--etherscan-api-key".to_string());
-
-    // For the non-etherscan based explorer chains.
-    if chain.eq("form") || chain.eq("lightlink") || chain.eq("mode") || chain.eq("morph") || chain.eq("superseed") {
-        // Add the verifyContract flag and the verifier URL.
-        args.push("\"verifyContract\"".to_string());
-        let explorer_url = utils::chain_data::get_explorer_url_by_name(chain);
-        args.push("--verifier-url".to_string());
-        // Append "api\?" to the explorer URL to form the verifier URL.
-        args.push(format!("{}api\\?", explorer_url));
-    } else if chain.eq("chiliz") {
-        args.push("\"verifyContract\"".to_string());
-        // For the "chiliz" chain, use a specific routescan URL.
-        args.push("--verifier-url".to_string());
-        args.push("https://api.routescan.io/v2/network/mainnet/evm/88888/etherscan".to_string());
-    } else {
-        // For other chains, etherscan based, use the API key.
-        args.push(format!("${}_API_KEY", chain.to_uppercase()));
-    }
-
-    args
 }
