@@ -1,4 +1,4 @@
-use std::{env, fs, io::Write, path::Path, process::Command};
+use std::{env, fs, io::Write, path::Path, process::Command, thread, time::Duration};
 use toml::Value as TomlValue;
 
 mod utils;
@@ -165,6 +165,8 @@ fn main() {
 
     // If the verify flag is set, run the verification process
     if verify_deployment {
+        println!("Waiting for 10 seconds to allow explorer to process deployments... \n");
+        thread::sleep(Duration::from_secs(10)); // Sleep for 10 seconds
         verify::verify_contracts(&script_name, &provided_chains, show_cli);
     }
 }
