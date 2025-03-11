@@ -165,8 +165,10 @@ fn main() {
 
     // If the verify flag is set, run the verification process
     if verify_deployment {
-        println!("Waiting for 10 seconds to allow explorer to process deployments... \n");
-        thread::sleep(Duration::from_secs(10)); // Sleep for 10 seconds
+        if !show_cli {
+            println!("Waiting for 10 seconds to allow explorer to process deployments... \n");
+            thread::sleep(Duration::from_secs(10)); // Sleep for 10 seconds
+        }
         verify::verify_contracts(&script_name, &provided_chains, show_cli);
     }
 }
