@@ -18,6 +18,7 @@ fn main() {
     let mut provided_chains = Vec::new();
     let mut sender = "".to_string();
     let mut script_name = "".to_string();
+    let mut show_cli = false;
     let mut verify_deployment = false;
 
     // Parse all arguments
@@ -42,6 +43,7 @@ fn main() {
                 let sender_address = iter.next().expect("sender address").to_string();
                 sender = sender_address.to_string();
             }
+            "--show" => show_cli = true,
             "--verify" => verify_deployment = true,
             _ => {
                 if !arg.starts_with("--") && !on_all_chains {
@@ -117,47 +119,53 @@ fn main() {
             command_args.push("--legacy".to_string());
         }
 
-        println!("Running the deployment command: {} {} {} \n", env_var, command, command_args.join(" "));
+        let full_command = format!("{} {} {}", env_var, command, command_args.join(" "));
 
-        // Set the environment variable
-        let env_var_parts: Vec<&str> = env_var.split('=').collect();
-        env::set_var(env_var_parts[0], env_var_parts[1]);
-
-        // Create the CLI and capture the command output
-        let output = Command::new(command).args(&command_args).output().expect("Failed to run command");
-
-        // Process command output
-        let output_str = String::from_utf8_lossy(&output.stdout);
-        if output.status.success() {
-            println!("Command output: {}\n", output_str);
+        if show_cli {
+            println!("Command to be executed: {}", full_command);
         } else {
-            eprintln!("Command failed with error: {}\n", String::from_utf8_lossy(&output.stderr));
-        }
+            println!("Running the deployment command: {}", full_command);
 
-        // Initialize the `Broadcast` instance
-        let broadcast = Broadcast::new(&output_str, &script_name, broadcast_deployment)
-            .expect("Failed to create Broadcast instance");
+            // Set the environment variable
+            let env_var_parts: Vec<&str> = env_var.split('=').collect();
+            env::set_var(env_var_parts[0], env_var_parts[1]);
 
-        if cp_broadcasted_file {
-            broadcast.copy_broadcast_file(chain);
-        }
+            // Create the CLI and capture the command output
+            let output = Command::new(command).args(&command_args).output().expect("Failed to run command");
 
-        if log_broadcasts {
-            let deployment_table = broadcast.generate_deployment_table();
+            // Process command output
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            if output.status.success() {
+                println!("Command output: {}\n", output_str);
+            } else {
+                eprintln!("Command failed with error: {}\n", String::from_utf8_lossy(&output.stderr));
+            }
 
-            // Append the deployment table to the file
-            let mut file = fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open("deployments.md")
-                .expect("Failed to open deployment file");
-            file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
+            // Initialize the `Broadcast` instance
+            let broadcast = Broadcast::new(&output_str, &script_name, broadcast_deployment)
+                .expect("Failed to create Broadcast instance");
+
+            if cp_broadcasted_file {
+                broadcast.copy_broadcast_file(chain);
+            }
+
+            if log_broadcasts {
+                let deployment_table = broadcast.generate_deployment_table();
+
+                // Append the deployment table to the file
+                let mut file = fs::OpenOptions::new()
+                    .append(true)
+                    .create(true)
+                    .open("deployments.md")
+                    .expect("Failed to open deployment file");
+                file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
+            }
         }
     }
 
     // If the verify flag is set, run the verification process
     if verify_deployment {
-        verify::verify_contracts(&script_name, &provided_chains);
+        verify::verify_contracts(&script_name, &provided_chains, show_cli);
     }
 }
 

@@ -33,12 +33,13 @@ struct TransactionData {
 pub fn verify_contracts(
     script_name: &str,
     chains: &Vec<String>,
+    show_cli: bool,
 ) {
     let mut txs_data: Vec<(String, TransactionData)> = Vec::new();
 
     for chain in chains {
-        if let Err(e) = process_chain(script_name, chain, &mut txs_data) {
-            eprintln!("Error processing chain {}: {}", chain, e);
+        if let Err(e) = process_chain(script_name, chain, &mut txs_data, show_cli) {
+            println!("Error verifying chain {}: {}", chain, e);
         }
     }
 
@@ -62,7 +63,7 @@ pub fn verify_contracts(
                 match abi_encode(args) {
                     Ok(encoded) => encoded,
                     Err(e) => {
-                        eprintln!("Error encoding arguments for {}: {}", contract_name, e);
+                        println!("For chain {}, error encoding arguments for {}: {}", chain, contract_name, e);
                         continue;
                     }
                 }
@@ -87,16 +88,32 @@ pub fn verify_contracts(
         let mut verifier_flags = get_verifier_flags(&chain);
         args_vec.append(&mut verifier_flags);
 
-        match Command::new("forge").args(&args_vec).output() {
-            Ok(output) => {
-                if !output.status.success() {
-                    println!("Error verifying contract {}: {}", contract_name, String::from_utf8_lossy(&output.stderr));
-                } else {
-                    println!("Successfully verified {}: {}", contract_name, String::from_utf8_lossy(&output.stdout));
+        let full_command = format!("forge {}", args_vec.join(" "));
+
+        if show_cli {
+            println!("Verification command to be executed: {}", full_command);
+        } else {
+            match Command::new("forge").args(&args_vec).output() {
+                Ok(output) => {
+                    if !output.status.success() {
+                        println!(
+                            "For chain {}, the verification did not work for contract {} using the command: {}\nError: {}",
+                            chain,
+                            contract_name,
+                            full_command,
+                            String::from_utf8_lossy(&output.stderr)
+                        );
+                    } else {
+                        println!(
+                            "Successfully verified {}: {}",
+                            contract_name,
+                            String::from_utf8_lossy(&output.stdout)
+                        );
+                    }
                 }
-            }
-            Err(e) => {
-                eprintln!("Failed to run forge verify-contract: {}", e);
+                Err(e) => {
+                    println!("For chain {}, failed to run forge verify-contract command: {}", chain, e);
+                }
             }
         }
     }
@@ -106,9 +123,14 @@ fn process_chain(
     script_name: &str,
     chain: &str,
     txs_data: &mut Vec<(String, TransactionData)>,
+    show_cli: bool,
 ) -> Result<(), String> {
     let chain_id = chain_data::get_chain_id(chain);
-    let file_path = format!("broadcast/{}/{}/run-latest.json", script_name, chain_id);
+    let file_path: String = if show_cli {
+        format!("broadcast/{}/{}/dry-run/run-latest.json", script_name, chain_id)
+    } else {
+        format!("broadcast/{}/{}/run-latest.json", script_name, chain_id)
+    };
 
     let json_content =
         fs::read_to_string(&file_path).map_err(|_| format!("Failed to read the broadcast file: {}", &file_path))?;
