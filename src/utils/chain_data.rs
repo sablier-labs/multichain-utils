@@ -41,11 +41,11 @@ const CHAINS: &[(&str, ChainData)] = &[
     ("919", ChainData { name: "Mode Sepolia", explorer_url: "https://sepolia.explorer.mode.network/" }),
     ("10143", ChainData { name: "Monad Testnet", explorer_url: "https://testnet.monadexplorer.com/" }),
     ("2810", ChainData { name: "Morph Holesky", explorer_url: "https://sepolia.morphl2.io/" }),
-    ("11155420", ChainData { name: "Optimism Sepolia", explorer_url: "https://sepolia.optimistic.etherscan.io/" }),
+    ("11155420", ChainData { name: "Optimism Sepolia", explorer_url: "https://sepolia-optimism.etherscan.io/" }),
     ("974399131", ChainData { name: "SKALE Testnet", explorer_url: "https://sepolia.skale.io/" }),
-    ("53302", ChainData { name: "Superseed Sepolia", explorer_url: "https://sepolia.superseed.xyz/" }),
-    ("167009", ChainData { name: "Taiko Hekla", explorer_url: "https://sepolia.taikoscan.io/" }),
-    ("300", ChainData { name: "zkSync Sepolia", explorer_url: "https://sepolia.zksync.network/" }),
+    ("53302", ChainData { name: "Superseed Sepolia", explorer_url: "sepolia-explorer.superseed.xyz/" }),
+    ("167009", ChainData { name: "Taiko Hekla", explorer_url: "https://hekla.taikoexplorer.com/" }),
+    ("300", ChainData { name: "zkSync Sepolia", explorer_url: "https://sepolia-era.zksync.network/" }),
 ];
 
 /// Returns the chain id for a given partial or complete chain name.
