@@ -24,10 +24,11 @@ fn abi_encode(args: &[Value]) -> Result<String, String> {
 }
 
 #[derive(Debug)]
-struct TransactionData {
+struct VerifyData {
     contract_name: Option<String>,
     contract_address: Option<String>,
     arguments: Option<Vec<Value>>,
+    libraries: Option<Vec<String>>,
 }
 
 pub fn verify_contracts(
@@ -35,10 +36,10 @@ pub fn verify_contracts(
     chains: &Vec<String>,
     show_cli: bool,
 ) {
-    let mut txs_data: Vec<(String, TransactionData)> = Vec::new();
+    let mut verify_data: Vec<(String, VerifyData)> = Vec::new();
 
     for chain in chains {
-        if let Err(e) = process_chain(script_name, chain, &mut txs_data, show_cli) {
+        if let Err(e) = process_chain(script_name, chain, &mut verify_data, show_cli) {
             println!("Error verifying chain {}: {}", chain, e);
         }
     }
@@ -47,18 +48,18 @@ pub fn verify_contracts(
     env::set_var("FOUNDRY_PROFILE", "optimized");
 
     // Iterate over all transactions and verify each contract.
-    for (chain, tx) in txs_data {
-        let contract_name = match &tx.contract_name {
+    for (chain, data) in verify_data {
+        let contract_name = match &data.contract_name {
             Some(name) => name,
             None => continue,
         };
 
-        let contract_addr = match &tx.contract_address {
+        let contract_addr = match &data.contract_address {
             Some(addr) => addr,
             None => continue,
         };
 
-        let constructor_args = if let Some(args) = &tx.arguments {
+        let constructor_args = if let Some(args) = &data.arguments {
             if !args.is_empty() {
                 match abi_encode(args) {
                     Ok(encoded) => encoded,
@@ -85,13 +86,23 @@ pub fn verify_contracts(
             args_vec.push(constructor_args);
         }
 
+        // Add libraries if any
+        if let Some(libraries) = &data.libraries {
+            for lib in libraries {
+                if !lib.is_empty() {
+                    args_vec.push("--libraries".to_string());
+                    args_vec.push(lib.clone());
+                }
+            }
+        }
+
         let mut verifier_flags = get_verifier_flags(&chain);
         args_vec.append(&mut verifier_flags);
 
         let full_command = format!("forge {}", args_vec.join(" "));
 
         if show_cli {
-            println!("Verification command to be executed: {}", full_command);
+            println!("Verification command to be executed: FOUNDRY_PROFILE=optimized {} \n", full_command);
         } else {
             match Command::new("forge").args(&args_vec).output() {
                 Ok(output) => {
@@ -122,7 +133,7 @@ pub fn verify_contracts(
 fn process_chain(
     script_name: &str,
     chain: &str,
-    txs_data: &mut Vec<(String, TransactionData)>,
+    verify_data: &mut Vec<(String, VerifyData)>,
     show_cli: bool,
 ) -> Result<(), String> {
     let chain_id = chain_data::get_chain_id(chain);
@@ -137,6 +148,12 @@ fn process_chain(
     let json_value: Value =
         serde_json::from_str(&json_content).map_err(|_| format!("Failed to parse JSON in file: {}", &file_path))?;
 
+    // Extract libraries from the JSON
+    let libraries: Option<Vec<String>> = json_value
+        .get("libraries")
+        .and_then(|v| v.as_array())
+        .map(|lib_array| lib_array.iter().filter_map(|lib| lib.as_str().map(|s| s.to_string())).collect());
+
     if let Some(tx_array) = json_value.get("transactions").and_then(|v| v.as_array()) {
         for tx_value in tx_array {
             let contract_name = tx_value.get("contractName").and_then(|v| v.as_str()).map(String::from);
@@ -147,7 +164,10 @@ fn process_chain(
                 _ => None,
             };
 
-            txs_data.push((chain.to_string(), TransactionData { contract_name, contract_address, arguments }));
+            verify_data.push((
+                chain.to_string(),
+                VerifyData { contract_name, contract_address, arguments, libraries: libraries.clone() },
+            ));
         }
     }
 

@@ -122,7 +122,7 @@ fn main() {
         let full_command = format!("{} {} {}", env_var, command, command_args.join(" "));
 
         if show_cli {
-            println!("Command to be executed: {}", full_command);
+            println!("Command to be executed: {} \n", full_command);
         } else {
             println!("Running the deployment command: {}", full_command);
 
