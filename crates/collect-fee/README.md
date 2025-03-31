@@ -35,6 +35,12 @@ To list all available commands:
 just
 ```
 
+To run
+
+```bash
+just run
+```
+
 ## Usage
 
 TODO

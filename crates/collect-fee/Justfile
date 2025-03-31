@@ -22,7 +22,7 @@ fmt:
 lint:
     cargo clippy
 
-# Build and run the project
+# Build and run the project locally.
 run:
     RUST_BACKTRACE=1 cargo run
 
