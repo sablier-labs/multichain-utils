@@ -1,8 +1,8 @@
-use std::{env, fs, io::Write, path::Path, process::Command};
+use std::{env, fs, io::Write, path::Path, process::Command, thread, time::Duration};
 use toml::Value as TomlValue;
 
 mod utils;
-use utils::{constants, Broadcast};
+use utils::{constants, verify, Broadcast};
 
 fn main() {
     // Process command-line arguments
@@ -18,6 +18,7 @@ fn main() {
     let mut provided_chains = Vec::new();
     let mut sender = "".to_string();
     let mut script_name = "".to_string();
+    let mut show_cli = false;
     let mut verify_deployment = false;
 
     // Parse all arguments
@@ -42,6 +43,7 @@ fn main() {
                 let sender_address = iter.next().expect("sender address").to_string();
                 sender = sender_address.to_string();
             }
+            "--show" => show_cli = true,
             "--verify" => verify_deployment = true,
             _ => {
                 if !arg.starts_with("--") && !on_all_chains {
@@ -84,7 +86,8 @@ fn main() {
     let chains_string = provided_chains.clone().join(", ");
     println!("\nDeploying to the chains: {}\n", chains_string);
 
-    for chain in provided_chains {
+    // Iterate over the provided chains and run the deployment command
+    for chain in &provided_chains {
         let env_var = "FOUNDRY_PROFILE=optimized";
         let command = "forge";
 
@@ -100,14 +103,6 @@ fn main() {
             command_args.push(gas_price.to_string());
         }
 
-        // Push the verify flag and etherscan API key. We need to it separately because otherwise they would be treated
-        // as a single argument.
-        if verify_deployment {
-            command_args.push("--verify".to_string());
-            command_args.push("--etherscan-api-key".to_string());
-            command_args.push(format!("${}_API_KEY", chain.to_uppercase()));
-        }
-
         // Push the sender flag.
         command_args.push("--sender".to_string());
 
@@ -119,47 +114,62 @@ fn main() {
         // Push the sender address.
         command_args.push(sender.to_string());
 
-        // Add the legacy flag for the "linea" and "chiliz" chains, due to the lack of EIP-3855 support.
-        if chain.eq("linea") || chain.eq("chiliz") {
+        // Add the legacy flag for the "chiliz", "form, and "linea" chains, due to the lack of EIP-3855 support.
+        if chain.eq("chiliz") || chain.eq("form") || chain.eq("linea") {
             command_args.push("--legacy".to_string());
         }
 
-        println!("Running the deployment command: {} {} {} \n", env_var, command, command_args.join(" "));
+        let full_command = format!("{} {} {}", env_var, command, command_args.join(" "));
 
-        // Set the environment variable
-        let env_var_parts: Vec<&str> = env_var.split('=').collect();
-        env::set_var(env_var_parts[0], env_var_parts[1]);
-
-        // Create the CLI and capture the command output
-        let output = Command::new(command).args(&command_args).output().expect("Failed to run command");
-
-        // Process command output
-        let output_str = String::from_utf8_lossy(&output.stdout);
-        if output.status.success() {
-            println!("Command output: {}\n", output_str);
+        if show_cli {
+            println!("Command to be executed: {} \n", full_command);
         } else {
-            eprintln!("Command failed with error: {}\n", String::from_utf8_lossy(&output.stderr));
+            println!("Running the deployment command: {}", full_command);
+
+            // Set the environment variable
+            let env_var_parts: Vec<&str> = env_var.split('=').collect();
+            env::set_var(env_var_parts[0], env_var_parts[1]);
+
+            // Create the CLI and capture the command output
+            let output = Command::new(command).args(&command_args).output().expect("Failed to run command");
+
+            // Process command output
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            if output.status.success() {
+                println!("Command output: {}\n", output_str);
+            } else {
+                eprintln!("Command failed with error: {}\n", String::from_utf8_lossy(&output.stderr));
+            }
+
+            // Initialize the `Broadcast` instance
+            let broadcast = Broadcast::new(&output_str, &script_name, broadcast_deployment)
+                .expect("Failed to create Broadcast instance");
+
+            if cp_broadcasted_file {
+                broadcast.copy_broadcast_file(chain);
+            }
+
+            if log_broadcasts {
+                let deployment_table = broadcast.generate_deployment_table();
+
+                // Append the deployment table to the file
+                let mut file = fs::OpenOptions::new()
+                    .append(true)
+                    .create(true)
+                    .open("deployments.md")
+                    .expect("Failed to open deployment file");
+                file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
+            }
         }
+    }
 
-        // Initialize the `Broadcast` instance
-        let broadcast = Broadcast::new(&output_str, &script_name, broadcast_deployment)
-            .expect("Failed to create Broadcast instance");
-
-        if cp_broadcasted_file {
-            broadcast.copy_broadcast_file(&chain);
+    // If the verify flag is set, run the verification process
+    if verify_deployment {
+        if !show_cli {
+            println!("Waiting for 10 seconds to allow explorer to process deployments... \n");
+            thread::sleep(Duration::from_secs(10)); // Sleep for 10 seconds
         }
-
-        if log_broadcasts {
-            let deployment_table = broadcast.generate_deployment_table();
-
-            // Append the deployment table to the file
-            let mut file = fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open("deployments.md")
-                .expect("Failed to open deployment file");
-            file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
-        }
+        verify::verify_contracts(&script_name, &provided_chains, show_cli);
     }
 }
 

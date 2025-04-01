@@ -63,7 +63,7 @@ impl Broadcast {
             "| {} | [{}]({}) | [v{}](https://github.com/sablier-labs/deployments/blob/main/{}/v{}) |\n",
             contract_name,
             contract_addr,
-            chain_data::get_explorer(&self.chain_id, contract_addr),
+            chain_data::get_explorer_url_with_address(&self.chain_id, contract_addr),
             &self.version,
             &self.project,
             &self.version

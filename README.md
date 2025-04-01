@@ -36,6 +36,7 @@ multichain-deployer <chain_name> [OPTIONS]
 - `--help` Prints a help message
 - `--log` - Creates a Markdown file with the deployed contracts at `deployments.md`
 - `--script` - the script to run for deployment
+- `--show` - instead of executing the deployments, simply prints the CLI commands that would be run
 - `--verify` - Verify deployment on the respective chain explorer
 
 ### Example:
