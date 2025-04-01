@@ -4,7 +4,7 @@ pub const DEFAULT_DEPLOYER: &str = "0xb1bEF51ebCA01EB12001a639bDBbFF6eEcA12B9F";
 // A help message for the CLI tool that is displayed when the `--help` flag is passed.
 pub const HELP_MESSAGE: &str = r#"
 Usage:
-  multichain-deployer <chain_name> [OPTIONS]
+  multichain-utils <chain_name> [OPTIONS]
 
 Flags:
   --all          Deploy on all chains declared in the `foundry.toml` file
@@ -18,7 +18,7 @@ Flags:
   --verify       Verify deployment on the respective chain explorer
 
 Example:
-  multichain-deployer sepolia --script DeployFlow.s.sol
+  multichain-utils sepolia --script DeployFlow.s.sol
 
 Output:
   Deploying to the chains: sepolia

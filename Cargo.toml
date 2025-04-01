@@ -1,5 +1,5 @@
 [package]
-name = "multichain-deployer"
+name = "multichain-utils"
 version = "0.1.0"
 edition = "2021"
 

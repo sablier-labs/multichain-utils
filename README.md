@@ -1,4 +1,4 @@
-# Multichain Deployer
+# Multichain Utils
 
 A Rust-based utility script for deploying Sablier contracts on multiple chains via a single CLI, meant to be used by the Sablier team.
 
@@ -16,15 +16,15 @@ This script offers a CLI tool designed to enhance the experience of deploying So
 ### Steps
 
 ```bash
-git clone https://github.com/sablier-labs/multichain-deployer.git
-cd multichain-deployer
+git clone https://github.com/sablier-labs/multichain-utils.git
+cd multichain-utils
 cargo install --path . # Install the CLI locally
 ```
 
 ## Usage
 
 ```bash
-multichain-deployer <chain_name> [OPTIONS]
+multichain-utils <chain_name> [OPTIONS]
 ```
 
 ### Flags:
@@ -42,7 +42,7 @@ multichain-deployer <chain_name> [OPTIONS]
 ### Example:
 
 ```bash
-multichain-deployer sepolia --script DeployFlow.s.sol
+multichain-utils sepolia --script DeployFlow.s.sol
 ```
 
 **Output:**
