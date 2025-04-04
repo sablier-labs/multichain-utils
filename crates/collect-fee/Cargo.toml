@@ -3,10 +3,6 @@ name = "collect-fee"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "collect-fee"
-path = "src/main.rs"
-
 [dependencies]
 alloy = { version = "0.12.0", features = ["json-rpc"] }
 chrono = { version = "0.4", features = ["serde"] }
