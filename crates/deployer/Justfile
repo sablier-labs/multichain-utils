@@ -1,0 +1,35 @@
+# List available commands when just is called without arguments
+default:
+    just --list
+
+# Build the project
+build:
+    cargo build --release
+
+# Clean build artifacts
+clean:
+    cargo clean 
+
+# Install the project
+install:
+    cargo install --path .
+
+# Format code
+fmt:
+    cargo +nightly fmt
+
+# Run clippy lints
+lint:
+    cargo clippy
+
+# Build and run the project locally.
+run:
+    RUST_BACKTRACE=1 cargo run
+
+# Run tests
+test:
+    cargo test
+
+# Watch the project and run it when the code changes
+watch:
+    cargo watch -x 'run'

@@ -108,7 +108,8 @@ pub fn verify_contracts(
                 Ok(output) => {
                     if !output.status.success() {
                         println!(
-                            "For chain {}, the verification did not work for contract {} using the command: {}\nError: {}",
+                            "For chain {}, the verification did not work for contract {} using the command: \
+                             {}\nError: {}",
                             chain,
                             contract_name,
                             full_command,
