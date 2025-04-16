@@ -23,16 +23,16 @@ Navigate to `collect-fee` directory
 cd crates/collect-fee
 ```
 
-Install dependencies:
-
-```bash
-just install
-```
-
 To list all available commands:
 
 ```bash
 just
+```
+
+Install dependencies:
+
+```bash
+just install
 ```
 
 To run
