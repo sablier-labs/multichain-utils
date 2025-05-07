@@ -10,22 +10,15 @@ build:
 clean:
     cargo clean 
 
-# Install collect-fee
-install-collect-fee:
-    cargo install --path crates/collect-fee
-
 # Install deployer
 install-deployer:
     cargo install --path crates/deployer
 
-# Format code
-fmt:
-    cargo +nightly fmt --all
+# Format code using nightly channel
+format:
+    rustup run nightly cargo fmt --all
 
 # Delegate to a crate’s justfile
-just-collect-fee *ARGS:
-    just --justfile crates/collect-fee/Justfile {{ARGS}}
-
 just-deployer *ARGS:
     just --justfile crates/deployer/Justfile {{ARGS}}
 

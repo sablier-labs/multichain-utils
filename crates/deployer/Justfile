@@ -14,9 +14,9 @@ clean:
 install:
     cargo install --path .
 
-# Format code
-fmt:
-    cargo +nightly fmt
+# Format code using nightly channel
+format:
+    rustup run nightly cargo fmt --all
 
 # Run clippy lints
 lint:
