@@ -27,7 +27,6 @@ const CHAINS: &[(&str, ChainData)] = &[
     ("137", ChainData { name: "Polygon", explorer_url: "https://polygonscan.com/" }),
     ("534352", ChainData { name: "Scroll", explorer_url: "https://scrollscan.com/" }),
     ("5330", ChainData { name: "Superseed", explorer_url: "https://explorer.superseed.xyz/" }),
-    ("167000", ChainData { name: "Taiko Mainnet", explorer_url: "https://taikoscan.io/" }),
     ("5845", ChainData { name: "Tangle", explorer_url: "https://explorer.tangle.tools/" }),
     ("50", ChainData { name: "XDC", explorer_url: "https://xdcscan.com/" }),
     ("324", ChainData { name: "zkSync Era", explorer_url: "https://era.zksync.network/" }),
@@ -44,7 +43,6 @@ const CHAINS: &[(&str, ChainData)] = &[
     ("11155420", ChainData { name: "Optimism Sepolia", explorer_url: "https://sepolia-optimism.etherscan.io/" }),
     ("974399131", ChainData { name: "SKALE Testnet", explorer_url: "https://sepolia.skale.io/" }),
     ("53302", ChainData { name: "Superseed Sepolia", explorer_url: "sepolia-explorer.superseed.xyz/" }),
-    ("167009", ChainData { name: "Taiko Hekla", explorer_url: "https://hekla.taikoexplorer.com/" }),
     ("300", ChainData { name: "zkSync Sepolia", explorer_url: "https://sepolia-era.zksync.network/" }),
 ];
 
