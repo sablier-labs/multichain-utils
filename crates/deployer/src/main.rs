@@ -1,4 +1,4 @@
-use std::{env, fs, io::Write, path::Path, process::Command, thread, time::Duration};
+use std::{env, fs, path::Path, process::Command, thread, time::Duration};
 use toml::Value as TomlValue;
 
 mod utils;
@@ -13,7 +13,6 @@ fn main() {
     let mut broadcast_deployment = false;
     let mut cp_broadcasted_file = false;
     let mut gas_price = "".to_string();
-    let mut log_broadcasts = false;
     let mut on_all_chains = false;
     let mut provided_chains = Vec::new();
     let mut sender = "".to_string();
@@ -35,7 +34,6 @@ fn main() {
                 let value = iter.next().expect("gas price value").to_string();
                 gas_price = value.to_string();
             }
-            "--log" => log_broadcasts = true,
             "--script" => {
                 script_name = iter.next().expect("script name").to_string();
             }
@@ -147,18 +145,6 @@ fn main() {
 
             if cp_broadcasted_file {
                 broadcast.copy_broadcast_file(chain);
-            }
-
-            if log_broadcasts {
-                let deployment_table = broadcast.generate_deployment_table();
-
-                // Append the deployment table to the file
-                let mut file = fs::OpenOptions::new()
-                    .append(true)
-                    .create(true)
-                    .open("deployments.md")
-                    .expect("Failed to open deployment file");
-                file.write_all(deployment_table.as_bytes()).expect("Failed to write to the deployment file");
             }
         }
     }

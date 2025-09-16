@@ -59,17 +59,6 @@ pub fn get_chain_id(chain_name: &str) -> &str {
         .unwrap_or(chain_name)
 }
 
-/// Returns the chain data for a given chain_id, if it exists.
-pub fn get_data(chain_id: &str) -> Option<&'static ChainData> {
-    CHAINS.iter().find(|entry| entry.0 == chain_id).map(|entry| &entry.1)
-}
-
-/// Returns the explorer URL for a given chain_id.
-/// If the chain_id is not found, returns "<N/A>".
-pub fn get_explorer_url(chain_id: &str) -> String {
-    get_data(chain_id).map(|data| data.explorer_url.to_string()).unwrap_or_else(|| "<N/A>".to_string())
-}
-
 /// Returns the explorer URL based on a partial or complete chain name.
 /// The search is performed in a case-insensitive manner by converting both the input
 /// and each chain's name to lowercase. If a match is found (i.e. the chain's name contains
@@ -81,26 +70,4 @@ pub fn get_explorer_url_by_name(chain_name: &str) -> String {
         .find(|(_, data)| data.name.to_lowercase().contains(&query))
         .map(|(_, data)| data.explorer_url.to_string())
         .unwrap_or_else(|| "<N/A>".to_string())
-}
-
-/// Returns the explorer URL for a given chain_id and contract_addr.
-/// This function first obtains the base explorer URL using `get_explorer_url`
-/// and then appends the path "address/" followed by the contract address.
-/// If the chain_id is not found (i.e. the base URL is "<N/A>"), it returns "<N/A>".
-pub fn get_explorer_url_with_address(
-    chain_id: &str,
-    contract_addr: &str,
-) -> String {
-    let base_url = get_explorer_url(chain_id);
-    if base_url == "<N/A>" {
-        "<N/A>".to_string()
-    } else {
-        format!("{}address/{}", base_url, contract_addr)
-    }
-}
-
-/// Returns the chain name for a given chain_id.
-/// If the chain_id is not found, returns the chain_id itself.
-pub fn get_name(chain_id: &str) -> &str {
-    get_data(chain_id).map(|data| data.name).unwrap_or(chain_id)
 }

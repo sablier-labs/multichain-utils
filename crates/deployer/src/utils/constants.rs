@@ -12,7 +12,6 @@ Flags:
   --broadcast    Whether the deployment should be broadcasted or not
   --gas-price    Specify the gas price for the deployment in wei
   --help         Print a help message
-  --log          Enable logging of broadcasts
   --script       The script to run for deployment
   --show         Instead of executing the deployments, simply prints the CLI commands that would be run
   --verify       Verify deployment on the respective chain explorer
