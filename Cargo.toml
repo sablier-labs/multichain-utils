@@ -1,15 +1,13 @@
 [workspace]
-members = [
-    "crates/deployer"
-]
+  members = ["crates/deployer"]
 
-resolver = "2"
+  resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
-edition = "2021"
-# Remember to update clippy.toml as well
-rust-version = "1.85"
-authors = ["Sablier Labs"]
-homepage = "https://github.com/sablier-labs/multichain-utils"
-repository = "https://github.com/sablier-labs/multichain-utils"
+  version = "0.1.0"
+  edition = "2021"
+  # Remember to update clippy.toml as well
+  rust-version = "1.85"
+  authors = ["Sablier Labs"]
+  homepage = "https://github.com/sablier-labs/multichain-utils"
+  repository = "https://github.com/sablier-labs/multichain-utils"
