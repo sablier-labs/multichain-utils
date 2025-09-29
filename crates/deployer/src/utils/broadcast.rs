@@ -54,7 +54,7 @@ impl Broadcast {
         &self,
         chain: &str,
     ) {
-        let dest_path = format!("../deployments/{}/v{}/broadcasts/{}.json", self.project, self.version, chain);
+        let dest_path = format!("../sdk/{}/v{}/broadcasts/{}.json", self.project, self.version, chain);
 
         // Ensure the parent directory exists
         if let Some(parent) = Path::new(&dest_path).parent() {
@@ -64,6 +64,6 @@ impl Broadcast {
         }
 
         // Copy the file
-        fs::copy(&self.file_path, &dest_path).expect("Failed to copy and rename run-latest.json to deployments");
+        fs::copy(&self.file_path, &dest_path).expect("Failed to copy and rename run-latest.json to sdk");
     }
 }
