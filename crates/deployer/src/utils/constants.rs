@@ -4,7 +4,7 @@ pub const DEFAULT_DEPLOYER: &str = "0xb1bEF51ebCA01EB12001a639bDBbFF6eEcA12B9F";
 // A help message for the CLI tool that is displayed when the "--help" flag is passed.
 pub const HELP_MESSAGE: &str = r#"
 Usage:
-  multichain-utils <chain_name> [OPTIONS]
+  deployer <chain_name> [OPTIONS]
 
 Flags:
   --all              Deploy on all chains declared in the "foundry.toml" file
@@ -12,12 +12,13 @@ Flags:
   --broadcast        Whether the deployment should be broadcasted or not
   --gas-price        Specify the gas price for the deployment in wei
   --help             Print a help message
+  --print-deployment Generate a TypeScript "deployments.ts" file with contract addresses and block numbers
   --script           The script to run for deployment
   --show             Instead of executing the deployments, simply prints the CLI commands that would be run
   --verify           Verify deployment on the respective chain explorer
 
 Example:
-  multichain-utils sepolia --script DeployFlow.s.sol
+  deployer sepolia --script DeployFlow.s.sol
 
 Output:
   Deploying to the chains: sepolia
