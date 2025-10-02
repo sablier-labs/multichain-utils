@@ -1,4 +1,4 @@
-use std::{env, fs, path::Path, process::Command, thread, time::Duration};
+use std::{env, fs, io::Write, path::Path, process::Command, thread, time::Duration};
 use toml::Value as TomlValue;
 
 mod utils;
@@ -14,6 +14,7 @@ fn main() {
     let mut cp_broadcasted_file = false;
     let mut gas_price = "".to_string();
     let mut on_all_chains = false;
+    let mut print_deployment = false;
     let mut provided_chains = Vec::new();
     let mut sender = "".to_string();
     let mut script_name = "".to_string();
@@ -34,6 +35,7 @@ fn main() {
                 let value = iter.next().expect("gas price value").to_string();
                 gas_price = value.to_string();
             }
+            "--print-deployment" => print_deployment = true,
             "--script" => {
                 script_name = iter.next().expect("script name").to_string();
             }
@@ -89,8 +91,12 @@ fn main() {
         let env_var = "FOUNDRY_PROFILE=optimized";
         let command = "forge";
 
-        let mut command_args =
-            vec!["script".to_string(), format!("script/{}", script_name), "--rpc-url".to_string(), chain.to_string()];
+        let mut command_args = vec![
+            "script".to_string(),
+            format!("scripts/solidity/{}", script_name),
+            "--rpc-url".to_string(),
+            chain.to_string(),
+        ];
 
         if broadcast_deployment {
             command_args.push("--broadcast".to_string());
@@ -145,6 +151,18 @@ fn main() {
 
             if cp_broadcasted_file {
                 broadcast.copy_broadcast_file(chain);
+            }
+
+            if print_deployment {
+                let file_content = broadcast.get_deployments_file(chain);
+
+                // Append the deployment table to the file
+                let mut file = fs::OpenOptions::new()
+                    .append(true)
+                    .create(true)
+                    .open("deployments.ts")
+                    .expect("Failed to open deployment file");
+                file.write_all(file_content.as_bytes()).expect("Failed to write to the deployment file");
             }
         }
     }
