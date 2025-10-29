@@ -1,5 +1,8 @@
 # Multichain Utils
 
+> **⚠️ IMPORTANT ⚠️**  
+> This repository is no longer maintained and is outdated from the latest deployments we had on EVM chains.
+
 Rust-based utility scripts meant to be used by the Sablier team. This repo
 contains the following crates:
 
